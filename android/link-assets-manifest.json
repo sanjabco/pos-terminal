@@ -1,0 +1,25 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "application/assets/fonts/IRANSansWebFaNum-Bold.ttf",
+      "sha1": "31c8510f528ab0843339f19fb8429d8f210ecca0"
+    },
+    {
+      "path": "application/assets/fonts/IRANSansWebFaNum-Light.ttf",
+      "sha1": "cc29ee3541f937a31503c4dee038cd9d4fc26615"
+    },
+    {
+      "path": "application/assets/fonts/IRANSansWebFaNum-Medium.ttf",
+      "sha1": "0ee2693ff9a6358d2830e13d63be166b1398f257"
+    },
+    {
+      "path": "application/assets/fonts/IRANSansWebFaNum-UltraLight.ttf",
+      "sha1": "be03bd02ed0610a2d192876a75a11576836ff567"
+    },
+    {
+      "path": "application/assets/fonts/IRANSansWebFaNum.ttf",
+      "sha1": "d55d187de518d2738796e5fbb6cb9d19a72fed4c"
+    }
+  ]
+}
