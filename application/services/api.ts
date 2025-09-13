@@ -86,6 +86,9 @@ export const API_ENDPOINTS = {
     // User Profile endpoints
     USER_PROFILE: '/userprofile',
 
+    // Business endpoints
+    BUSINESS: '/Business',
+
     // Customer endpoints
     CUSTOMER: (cardNumber: string, branchId: number) => `/Customer/credit?cardNumber=${cardNumber}&branchId=${branchId}`,
 
@@ -224,6 +227,20 @@ export interface UserProfile {
     description: string;
     businessCategoryId: number;
     isVisible: boolean;
+}
+
+export interface BusinessInfoResponse {
+    Message: string;
+    Code: number;
+    Data: {
+        title: string;
+        phone: string;
+        email: string;
+        logo: string;
+        description: string;
+        businessCategoryId: number;
+        isVisible: boolean;
+    };
 }
 
 export interface CustomerResponse {

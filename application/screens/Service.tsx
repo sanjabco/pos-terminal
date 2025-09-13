@@ -179,7 +179,7 @@ function ServiceContent({
             {/* Main Content Card */}
             <View style={styles.contentCard}>
                 <Text style={styles.instructionText}>ابتدا بخش مورد نظر را انتخاب کنید</Text>
-                {/* <TouchableOpacity onPress={() => { navigation.navigate('NativePaymentTest') }}><Text>Test</Text></TouchableOpacity> */}
+                <TouchableOpacity onPress={() => { navigation.navigate('NativePaymentTest') }}><Text>Test</Text></TouchableOpacity>
                 <View style={styles.serviceOptionsContainer}>
                     <ScrollView contentContainerStyle={{ paddingBottom: 150 }} >
                         {services.map((service: any) => {

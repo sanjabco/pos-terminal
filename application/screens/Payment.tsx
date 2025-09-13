@@ -17,9 +17,10 @@ import {
   Alert,
 } from 'react-native';
 import PaymentIcon from '../components/PaymentIcon';
-import { POS_TYPE } from '@env'; // Or from 'react-native-dotenv' if not using moduleName option
-
 import { useSnackbarContext } from '../providers/SnackbarProvider';
+import { useBusinessInfo } from '../hooks/useApi';
+import { validateIranianIBAN, formatIBAN, cleanIBAN } from '../utils/ibanValidator';
+import { POS_TYPE } from '@env';
 
 const { width, height } = Dimensions.get('window');
 const { PaymentModule, PaymentSepehrModule } = NativeModules;
@@ -29,7 +30,7 @@ const paymentSepehrEvents = new NativeEventEmitter(PaymentSepehrModule);
 function Payment({ navigation, route }: { navigation: any, route: any }): React.JSX.Element {
   const { totalAmount, finalAmountToPay, creditUsed, creditOption, transactionResult } = route.params;
   const { showError } = useSnackbarContext();
-  console.log('transactionResult', transactionResult);
+  //console.log('transactionResult', transactionResult);
   const [result, setResult] = useState('');
   const [eventResult, setEventResult] = useState('');
   const [sepehrResult, setSepehrResult] = useState('');
@@ -116,16 +117,115 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
     });
     return () => sub.remove();
   }, []);
+  const businessInfo = useBusinessInfo();
+  const calcTashimPercent = () => {
+    if (finalAmountToPay > 3000000) {
+      return 1;
+    }
+    else {
+      return 3;
+    }
+    /* const myShare = finalAmountToPay * 3 / 100;
+    if (myShare > 30000) {
+      let r = 30000 * 100 / finalAmountToPay;
+      if (r < 1) {
+        return 1;
+      }
+      return Math.ceil(r);
+    }
+    else {
+      return 3
+    } */
+  }
+  const calculatedTashimPercent = calcTashimPercent()
+  const [tashimPercent1, setTashimPercent1] = useState(creditOption == 'saveForLater' ? 0 : (calculatedTashimPercent));
+  const [tashimPercent2, setTashimPercent2] = useState(creditOption == 'saveForLater' ? 100 : 100 - (calculatedTashimPercent));
+  const [iban1, setIban1] = useState('IR430600500901007959216001');
+  const [iban2, setIban2] = useState(businessInfo?.data?.Data?.email);
+  const [iban2Error, setIban2Error] = useState('');
+  const [isIban2Valid, setIsIban2Valid] = useState(false);
+
+  // Function to validate IBAN2 using Iranian IBAN validation
+  // Validates format, length, and mod-97 checksum according to ISO 13616 standard
+  const validateIban2 = (iban: string) => {
+    setIban2(iban);
+    if (!iban.trim()) {
+      setIban2Error('');
+      setIsIban2Valid(false);
+      return;
+    }
+
+    const validation = validateIranianIBAN(iban);
+    if (validation.isValid) {
+      setIban2Error('');
+      setIsIban2Valid(true);
+      // Format the IBAN for display
+      const r = cleanIBAN(iban);
+      setIban2(r);
+    } else {
+      setIban2Error(validation.error || 'شماره شبا نامعتبر است');
+      setIsIban2Valid(false);
+    }
+  };
+
+  // Initialize IBAN2 from business info when available
+  useEffect(() => {
+    if (businessInfo?.data?.Data?.email) {
+      // If business email is available and looks like an IBAN, use it
+      const email = businessInfo.data.Data.email;
+      validateIban2(email);
+    }
+  }, [businessInfo]);
+
+  // Check IBAN2 validity and navigate back if invalid
+  // When business IBAN is invalid, show error toast and return to previous screen
+  // Only validate if IBAN2 is actually being used (tashimPercent2 > 0)
+  useEffect(() => {
+    if (tashimPercent2 > 0 && iban2 && !isIban2Valid) {
+      // Show error toast and navigate back
+      showError('شماره شبا بیزینس اشتباه است لطفا با پشتیبانی تماس بگیرید');
+      setTimeout(() => {
+        navigation.goBack();
+      }, 200); // Wait 2 seconds to show the toast before navigating back
+    }
+  }, [iban2, isIban2Valid, tashimPercent2]);
 
   useEffect(() => {
+    console.log('tashimPercent1', tashimPercent1);
+    console.log('tashimPercent2', tashimPercent2);
+    console.log('iban1', iban1);
+    console.log('iban2', iban2);
+    console.log('iban2Error', iban2Error);
+    console.log('isIban2Valid', isIban2Valid);
     setTimeout(() => {
-      if (POS_TYPE == 'sepehr') {
-        callSepehr('purchase', (finalAmountToPay * 10).toString(), "1")
-      } else {
-        call('purchaseWithId', (finalAmountToPay * 10).toString(), (Math.random() * 1000000).toString(), true, true)
+      // Only require IBAN2 validation if it's actually being used (tashimPercent2 > 0)
+      if (tashimPercent2 > 0 && (iban2 && isIban2Valid)) {
+        handlePayment();
       }
     }, 1000)
-  }, []);
+  }, [iban2, isIban2Valid, tashimPercent2]);
+
+  // Function to handle payment with IBAN validation
+  const handlePayment = () => {
+    // Validate IBAN2 before proceeding (only if it's being used)
+    if (tashimPercent2 > 0 && iban2 && !isIban2Valid) {
+      showError('لطفاً شماره شبا معتبر وارد کنید');
+      return;
+    }
+
+    if (POS_TYPE === 'sepehr') {
+      callSepehr('purchase', (finalAmountToPay * 10).toString(), "1");
+    } else {
+      console.log('POS_TYPE', POS_TYPE);
+      // Use clean IBAN for payment processing
+      // Pass empty string for IBAN1 if percent1 is 0 or less
+      // Pass empty string for IBAN2 if percent2 is 0 or less
+      const iban1ToUse = tashimPercent1 > 0 ? iban1 : "";
+      const iban2ToUse = tashimPercent2 > 0 ? iban2 : "";
+
+      call('buttonTashim', (finalAmountToPay * 10).toString(), (Math.random() * 1000000).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>

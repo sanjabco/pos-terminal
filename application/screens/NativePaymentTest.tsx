@@ -29,6 +29,15 @@ export default function NativePaymentTest() {
     const [sepehrResult, setSepehrResult] = useState('');
     const [sepehrEventResult, setSepehrEventResult] = useState('');
 
+    // New state variables for additional functions
+    const [tashimPercent1, setTashimPercent1] = useState('30');
+    const [tashimPercent2, setTashimPercent2] = useState('70');
+    const [iban1, setIban1] = useState('IR440600500772409768428001');
+    const [iban2, setIban2] = useState('IR540560611828005136987401');
+    const [leftTexts, setLeftTexts] = useState(['متن چپ 1', 'متن چپ 2']);
+    const [rightTexts, setRightTexts] = useState(['متن راست 1', 'متن راست 2']);
+    const [centerTexts, setCenterTexts] = useState(['متن وسط']);
+
     useEffect(() => {
         const sub = paymentEvents.addListener('PaymentResult', (res) => {
             setEventResult(JSON.stringify(res, null, 2));
@@ -63,6 +72,21 @@ export default function NativePaymentTest() {
         }
     };
 
+    // Helper function to handle array input parsing
+    const parseArrayInput = (input: string): string[] => {
+        return input.split(',').map(item => item.trim()).filter(item => item.length > 0);
+    };
+
+    // Helper function to validate required fields
+    const validateRequired = (fields: { [key: string]: string }, fieldNames: string[]): string | null => {
+        for (const fieldName of fieldNames) {
+            if (!fields[fieldName] || fields[fieldName].trim() === '') {
+                return `${fieldName} is required`;
+            }
+        }
+        return null;
+    };
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.header}>Native Payment Test</Text>
@@ -70,7 +94,7 @@ export default function NativePaymentTest() {
             <Text style={styles.text}>Event Result: {eventResult}</Text>
 
             <Text style={styles.section}>Purchase With ID</Text>
-            <TextInput style={styles.input} placeholder="Amount" value={amount} onChangeText={setAmount} />
+            <TextInput style={styles.input} placeholder="Amount" value={amount} onChangeText={setAmount} keyboardType="numeric" />
             <TextInput style={styles.input} placeholder="ID" value={id} onChangeText={setId} />
             <View style={styles.row}><Text style={styles.text}>Print</Text><Switch value={print} onValueChange={setPrint} /></View>
             <View style={styles.row}><Text style={styles.text}>Show Receipt</Text><Switch value={showReceipt} onValueChange={setShowReceipt} /></View>
@@ -111,12 +135,48 @@ export default function NativePaymentTest() {
             <Button title="Send APDU" onPress={() => call('sendApdu', apdu)} />
 
             <Text style={styles.section}>Asan Kharid</Text>
-            <TextInput style={styles.input} placeholder="Installment Count" value={installmentCount} onChangeText={setInstallmentCount} />
+            <TextInput style={styles.input} placeholder="Installment Count" value={installmentCount} onChangeText={setInstallmentCount} keyboardType="numeric" />
             <TextInput style={styles.input} placeholder="Installment Date" value={installmentDate} onChangeText={setInstallmentDate} />
             <Button title="Asan Kharid" onPress={() => call('asanKharidSend', amount, parseInt(installmentCount), installmentDate, print, showReceipt)} />
 
             <Text style={styles.section}>Test Medical Asan Kharid</Text>
             <Button title="Test Medical Asan Kharid" onPress={() => call('sendTestAsankharid')} />
+
+            <Text style={styles.section}>Tashim Payment (Predefined)</Text>
+            <Button title="Send Tashim" onPress={() => call('sendTashim', amount, id, print, showReceipt)} />
+
+            <Text style={styles.section}>Tashim Payment (Custom)</Text>
+            <TextInput style={styles.input} placeholder="Percent 1" value={tashimPercent1} onChangeText={setTashimPercent1} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="Percent 2" value={tashimPercent2} onChangeText={setTashimPercent2} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="IBAN 1" value={iban1} onChangeText={setIban1} />
+            <TextInput style={styles.input} placeholder="IBAN 2" value={iban2} onChangeText={setIban2} />
+            <Button title="Button Tashim" onPress={() => {
+                const validation = validateRequired({ amount, id, tashimPercent1, tashimPercent2, iban1, iban2 }, ['amount', 'id', 'tashimPercent1', 'tashimPercent2', 'iban1', 'iban2']);
+                if (validation) {
+                    setResult(`Error: ${validation}`);
+                    return;
+                }
+                call('buttonTashim', amount, id, parseInt(tashimPercent1), parseInt(tashimPercent2), iban1, iban2, print, showReceipt);
+            }} />
+
+            <Text style={styles.section}>Bill Payment</Text>
+            <Button title="Send Bill" onPress={() => {
+                const validation = validateRequired({ billId, billPaymentId }, ['billId', 'billPaymentId']);
+                if (validation) {
+                    setResult(`Error: ${validation}`);
+                    return;
+                }
+                call('sendBill', billId, billPaymentId, print, showReceipt);
+            }} />
+
+            <Text style={styles.section}>Swipe Card For Hash</Text>
+            <Button title="Swipe Card For Hash" onPress={() => call('swipeCardForHash')} />
+
+            <Text style={styles.section}>Custom Receipt Print</Text>
+            <TextInput style={styles.input} placeholder="Left Texts (comma separated)" value={leftTexts.join(',')} onChangeText={(text) => setLeftTexts(parseArrayInput(text))} />
+            <TextInput style={styles.input} placeholder="Right Texts (comma separated)" value={rightTexts.join(',')} onChangeText={(text) => setRightTexts(parseArrayInput(text))} />
+            <TextInput style={styles.input} placeholder="Center Texts (comma separated)" value={centerTexts.join(',')} onChangeText={(text) => setCenterTexts(parseArrayInput(text))} />
+            <Button title="Print Custom Receipt" onPress={() => call('printCustomReceipt', leftTexts, rightTexts, centerTexts)} />
 
             <Text style={styles.section}>Sepehr Payment</Text>
             <Button title="Sepehr Payment" onPress={() => callSepehr('purchase', amount, "1")} />
@@ -133,13 +193,18 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontFamily: 'IRANSansWebFaNum-Bold',
         marginBottom: 12,
-        color: '#333'
+        color: '#333',
+        textAlign: 'center'
     },
     section: {
-        marginTop: 18,
+        marginTop: 20,
+        marginBottom: 8,
         fontFamily: 'IRANSansWebFaNum-Bold',
         fontSize: 16,
-        color: '#333'
+        color: '#333',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        paddingBottom: 4
     },
     input: {
         borderWidth: 1,
@@ -148,16 +213,19 @@ const styles = StyleSheet.create({
         padding: 8,
         marginVertical: 4,
         fontFamily: 'IRANSansWebFaNum',
-        fontSize: 14
+        fontSize: 14,
+        backgroundColor: '#f9f9f9'
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginVertical: 4
+        marginVertical: 4,
+        justifyContent: 'space-between'
     },
     text: {
         fontFamily: 'IRANSansWebFaNum',
         fontSize: 14,
-        color: '#333'
+        color: '#333',
+        marginVertical: 2
     }
 }); 

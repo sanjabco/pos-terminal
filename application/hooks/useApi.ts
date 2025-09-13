@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse } from '../services/api';
+import { apiClient, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse } from '../services/api';
 import { TokenManager } from '../utils/tokenManager';
 
 // Query keys for React Query
@@ -40,6 +40,9 @@ export const queryKeys = {
 
     // User Profile
     userProfile: ['userProfile'] as const,
+
+    // Business
+    business: ['business'] as const,
 
     // Customer
     customer: (cardNumber: string, branchId: number) => ['customer', cardNumber, branchId] as const,
@@ -313,6 +316,19 @@ export const useUpdateUserProfile = () => {
             // Invalidate user profile data
             queryClient.invalidateQueries({ queryKey: queryKeys.userProfile });
         },
+    });
+};
+
+// Business hooks
+export const useBusinessInfo = () => {
+    return useQuery({
+        queryKey: queryKeys.business,
+        queryFn: async (): Promise<BusinessInfoResponse> => {
+            const response = await apiClient.get(API_ENDPOINTS.BUSINESS);
+            return response.data;
+        },
+        staleTime: 0,
+        gcTime: 0,
     });
 };
 

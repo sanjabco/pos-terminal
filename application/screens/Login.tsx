@@ -11,10 +11,11 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
-import { useSendOtp, useVerifyOtp } from '../hooks/useApi';
+import { useSendOtp, useVerifyOtp, useBusinessInfo } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
 import { AuthGuard } from '../components/AuthGuard';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
+import { apiClient, API_ENDPOINTS } from '../services/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,7 +29,7 @@ function Login({ navigation, route }: { navigation: any; route: any }): React.JS
     const verifyOtpMutation = useVerifyOtp();
 
     // Auth hook
-    const { login } = useAuth();
+    const { login, setBusinessProfile } = useAuth();
 
     return (
         <AuthGuard navigation={navigation} route={route} requireAuth={false}>
@@ -43,6 +44,7 @@ function Login({ navigation, route }: { navigation: any; route: any }): React.JS
                 sendOtpMutation={sendOtpMutation}
                 verifyOtpMutation={verifyOtpMutation}
                 login={login}
+                setBusinessProfile={setBusinessProfile}
             />
         </AuthGuard>
     );
@@ -58,9 +60,28 @@ function LoginContent({
     setOtp,
     sendOtpMutation,
     verifyOtpMutation,
-    login
+    login,
+    setBusinessProfile
 }: any): React.JSX.Element {
     const { showError } = useSnackbarContext();
+
+    // Function to fetch and store business info
+    const fetchAndStoreBusinessInfo = async () => {
+        try {
+            const response = await apiClient.get(API_ENDPOINTS.BUSINESS);
+            const businessData = response.data;
+
+            if (businessData.Code === 200 && businessData.Message === 'SUCCESS') {
+                await setBusinessProfile(businessData.Data);
+                console.log('Business info stored successfully:', businessData.Data);
+            } else {
+                console.warn('Business info fetch failed:', businessData.Message);
+            }
+        } catch (error) {
+            console.error('Error fetching business info:', error);
+            // Don't show error to user as this is not critical for login
+        }
+    };
 
     const handleSendOtp = () => {
         // Send OTP to mobile number
@@ -98,6 +119,10 @@ function LoginContent({
                             const success = await login(data.Data.token);
                             if (success) {
                                 console.log('Login successful and token stored');
+
+                                // Fetch and store business info
+                                await fetchAndStoreBusinessInfo();
+
                                 // Navigate to branch selection
                                 navigation.replace('BranchSelection');
                             } else {

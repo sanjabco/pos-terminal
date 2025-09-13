@@ -94,6 +94,20 @@ export const useAuth = () => {
         }
     };
 
+    const setBusinessProfile = async (businessProfile: BusinessProfile) => {
+        try {
+            await TokenManager.storeBusinessProfile(businessProfile);
+            setAuthState(prev => ({
+                ...prev,
+                businessProfile: businessProfile,
+            }));
+            return true;
+        } catch (error) {
+            console.error('Error setting business profile:', error);
+            return false;
+        }
+    };
+
     const logout = async () => {
         try {
             await TokenManager.clearAuthData();
@@ -122,5 +136,6 @@ export const useAuth = () => {
         logout,
         refreshAuth,
         setSelectedBranch,
+        setBusinessProfile,
     };
 }; 
