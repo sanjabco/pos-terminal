@@ -14,17 +14,18 @@ import {
   Dimensions,
   TextInput,
   Platform,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Keyboard,
 } from 'react-native';
 import GiftIcon from '../components/GiftIcon';
-import { useCustomer } from '../hooks/useApi';
+import { useCustomer, useCashbacks } from '../hooks/useApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { KeyboardAvoidingView, KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
-
+import { useServiceContext } from '../providers/ServiceProvider';
+import moment from 'moment-jalaali';
+import { useAuth } from '../hooks/useAuth';
 type RootStackParamList = {
   Mobile: undefined;
   Credit: { customerData?: any };
@@ -40,10 +41,13 @@ const { width, height } = Dimensions.get('window');
 
 function Mobile({ navigation }: MobileProps): React.JSX.Element {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [branchId, setBranchId] = useState(92); // Default branch ID as per your request
+  const { selectedBranch } = useAuth();
+  const [branchId, setBranchId] = useState(selectedBranch?.id || 92); // Default branch ID as per your request
+  console.log('branchId', branchId, selectedBranch);
   const [isValidPhone, setIsValidPhone] = useState(false);
   const [isDataSaved, setIsDataSaved] = useState(false);
   const phoneInputRef = useRef<TextInput>(null);
+  const { selectedServices } = useServiceContext();
 
   // Convert Persian numbers to English for API call
   const convertPersianToEnglish = (persianNumber: string): string => {
@@ -62,6 +66,9 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
   // Use the customer API hook
   const { data: customerData, isLoading, error, refetch } = useCustomer(englishPhoneNumber, branchId);
   console.log('customerData', customerData);
+
+  // Use the cashbacks API hook
+  const { data: cashbacksData } = useCashbacks();
   // Validate phone number and auto-fetch customer data
   useEffect(() => {
     const isValid = englishPhoneNumber.length === 11 && englishPhoneNumber.startsWith('09');
@@ -71,6 +78,34 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
       refetch();
     }
   }, [englishPhoneNumber, refetch]);
+
+  // Calculate active cashbacks for display in header
+  const getActiveCashbacks = () => {
+    if (cashbacksData?.Code !== 200 || !cashbacksData?.Data?.cashBackModel) {
+      return [];
+    }
+
+    const cashbacks = cashbacksData.Data.cashBackModel;
+
+    // Filter cashbacks by selected services if any are selected
+    let relevantCashbacks = cashbacks;
+    if (selectedServices.length > 0) {
+      const selectedServiceIds = selectedServices.map(s => parseInt(s.id));
+      relevantCashbacks = cashbacks.filter((cb: any) => selectedServiceIds.includes(cb.lineId));
+    }
+
+    // Filter active cashbacks (within date range)
+    const now = moment();
+    const activeCashbacks = relevantCashbacks.filter((cb: any) => {
+      const fromDate = moment(cb.fromDate, 'jYYYY/jMM/jDD');
+      const toDate = moment(cb.toDate, 'jYYYY/jMM/jDD');
+      return fromDate <= now && toDate >= now;
+    });
+
+    return activeCashbacks;
+  };
+
+  const activeCashbacks = getActiveCashbacks();
 
   // Save customer data for later use
   const saveCustomerData = async () => {
@@ -127,7 +162,11 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
             <View style={styles.giftSection}>
               <GiftIcon height={42} />
               <Text style={styles.giftTitle}>هدیه شما از این خرید</Text>
-              <Text style={styles.giftSubtitle}>۲۰٪ بازگشت اعتبار</Text>
+              {activeCashbacks.length > 0 ? (
+                <Text style={styles.cashbackMessage}>شما از این خرید هدیه بازگشت اعتبار می‌گیرید</Text>
+              ) : (
+                <Text style={styles.cashbackMessage}>شما از این خرید هدیه بازگشت اعتبار نمی‌گیرید</Text>
+              )}
             </View>
           </View>
         </View>
@@ -294,6 +333,12 @@ const styles = StyleSheet.create({
   giftSubtitle: {
     fontSize: 22,
     fontFamily: 'IRANSansWebFaNum',
+    color: '#000',
+    textAlign: 'center',
+  },
+  cashbackMessage: {
+    fontSize: 18,
+    fontFamily: 'IRANSansWebFaNum-Medium',
     color: '#000',
     textAlign: 'center',
   },

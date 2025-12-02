@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   Dimensions,
   BackHandler,
+  ActivityIndicator,
 } from 'react-native';
 import ArrowRight from '../components/ArrowRight';
 import SuccessIcon from '../components/SuccessIcon';
@@ -42,26 +43,39 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
 
   // State to store response data
   const [responseData, setResponseData] = React.useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(true);
 
   // Extract values from response data or fallback to route params
   const resultData = responseData?.result?.[0] || {};
   const totalAmount = transactionData?.totalAmount || 0;
   const finalAmountToPay = transactionData?.finalAmountToPay || 0;
   const creditUsed = transactionData?.creditUsed || 0;
-  const payBackAmount = resultData?.payBackAmount || 0;
+  const payBackAmount = resultData?.payBackAmount / 10 || 0;
   const result = transactionData?.result || '';
   const eventResult = transactionData?.eventResult || '';
 
   // Clear services and customer data when component mounts (after successful transaction)
   useEffect(() => {
     const sendTransaction = async () => {
+      setIsSubmitting(true);
       try {
+        if (transactionData?.paymentMethod === 'cash') {
+          transactionData.transactionResult.cashBackDto.forEach(async (item: any) => {
+            item.PaymentMethod = 'نقد';
+          });
+        } else {
+          transactionData.transactionResult.cashBackDto.forEach(async (item: any) => {
+            item.PaymentMethod = 'کارتی';
+          });
+        }
         const response = await createTransactionMutation.mutateAsync(transactionData?.transactionResult);
         console.log('response', response.Data);
         setResponseData(response.Data);
       } catch (error) {
         console.error('Transaction error:', error);
         showError('خطا در ارتباط با سرور');
+      } finally {
+        setIsSubmitting(false);
       }
     }
 
@@ -132,68 +146,75 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
 
         </View>
       </View>
-      <ScrollView>
-        {/* Main Content Card */}
-        <View style={styles.contentCard}>
-          {/* White Box Container */}
+      {isSubmitting ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF6B00" />
+          <Text style={styles.loadingText}>در حال ثبت تراکنش...</Text>
+        </View>
+      ) : (
+        <ScrollView>
+          {/* Main Content Card */}
+          <View style={styles.contentCard}>
+            {/* White Box Container */}
 
-          <View style={styles.whiteBox}>
-            {/* Success Icon */}
-            <View style={styles.iconContainer}>
-              <View style={styles.moneyIcon}>
-                <SuccessIcon height={90} />
+            <View style={styles.whiteBox}>
+              {/* Success Icon */}
+              <View style={styles.iconContainer}>
+                <View style={styles.moneyIcon}>
+                  <SuccessIcon height={90} />
+                </View>
               </View>
-            </View>
 
-            {/* Success Message */}
-            <Text style={styles.successMessage}>پرداخت موفق</Text>
-            {/* 
+              {/* Success Message */}
+              <Text style={styles.successMessage}>پرداخت موفق</Text>
+              {/* 
             <Text>{result}</Text>
             <Text>{eventResult}</Text> */}
 
 
-            {/* Cashback Section */}
-            <View style={styles.infoSection}>
-              <Text style={styles.infoLabel}>کش بک جدید</Text>
-              <View style={styles.amountContainer}>
-                <Text style={styles.currencyText}>تومان</Text>
-                <Text style={styles.amountText}>{formatNumberWithSeparator(payBackAmount)}</Text>
-              </View>
-            </View>
-
-            {/* Total Amount Section */}
-            <View style={styles.infoSection}>
-              <Text style={styles.infoLabel}>مبلغ کل</Text>
-              <View style={styles.amountContainer}>
-                <Text style={styles.currencyText}>تومان</Text>
-                <Text style={styles.amountText}>{formatNumberWithSeparator(totalAmount)}</Text>
-              </View>
-            </View>
-
-            {/* Final Amount Section */}
-            <View style={styles.infoSection}>
-              <Text style={styles.infoLabel}>مبلغ قابل پرداخت</Text>
-              <View style={styles.amountContainer}>
-                <Text style={styles.currencyText}>تومان</Text>
-                <Text style={styles.amountText}>{formatNumberWithSeparator(finalAmountToPay)}</Text>
-              </View>
-            </View>
-
-            {/* Credit Used Section */}
-            {creditUsed > 0 && (
+              {/* Cashback Section */}
               <View style={styles.infoSection}>
-                <Text style={styles.infoLabel}>اعتبار استفاده شده</Text>
+                <Text style={styles.infoLabel}>کش بک جدید</Text>
                 <View style={styles.amountContainer}>
                   <Text style={styles.currencyText}>تومان</Text>
-                  <Text style={styles.amountText}>{formatNumberWithSeparator(creditUsed)}</Text>
+                  <Text style={styles.amountText}>{formatNumberWithSeparator(payBackAmount)}</Text>
                 </View>
               </View>
-            )}
+
+              {/* Total Amount Section */}
+              <View style={styles.infoSection}>
+                <Text style={styles.infoLabel}>مبلغ کل</Text>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.amountText}>{formatNumberWithSeparator(totalAmount)}</Text>
+                </View>
+              </View>
+
+              {/* Final Amount Section */}
+              <View style={styles.infoSection}>
+                <Text style={styles.infoLabel}>مبلغ قابل پرداخت</Text>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.amountText}>{formatNumberWithSeparator(finalAmountToPay)}</Text>
+                </View>
+              </View>
+
+              {/* Credit Used Section */}
+              {creditUsed > 0 && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.infoLabel}>اعتبار استفاده شده</Text>
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.currencyText}>تومان</Text>
+                    <Text style={styles.amountText}>{formatNumberWithSeparator(creditUsed)}</Text>
+                  </View>
+                </View>
+              )}
+
+            </View>
 
           </View>
-
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
       {/* Footer Buttons */}
       <View style={styles.footerButtons}>
         <TouchableOpacity
@@ -396,6 +417,19 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontFamily: 'IRANSansWebFaNum-Bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF2F3',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'IRANSansWebFaNum-Medium',
+    textAlign: 'center',
   },
 });
 

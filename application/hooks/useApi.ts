@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse } from '../services/api';
+import { apiClient, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse, type CashBacksResponse } from '../services/api';
 import { TokenManager } from '../utils/tokenManager';
 
 // Query keys for React Query
@@ -46,6 +46,9 @@ export const queryKeys = {
 
     // Customer
     customer: (cardNumber: string, branchId: number) => ['customer', cardNumber, branchId] as const,
+
+    // Cashbacks
+    cashbacks: ['cashbacks'] as const,
 } as const;
 
 // Authentication hooks
@@ -356,6 +359,17 @@ export const useCreateTransaction = () => {
         onSuccess: () => {
             // Invalidate relevant queries
             queryClient.invalidateQueries({ queryKey: queryKeys.credits });
+        },
+    });
+};
+
+// Cashback hooks
+export const useCashbacks = () => {
+    return useQuery({
+        queryKey: queryKeys.cashbacks,
+        queryFn: async (): Promise<CashBacksResponse> => {
+            const response = await apiClient.get(API_ENDPOINTS.CASHBACKS);
+            return response.data;
         },
     });
 }; 

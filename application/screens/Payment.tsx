@@ -15,6 +15,7 @@ import {
   NativeModules,
   ScrollView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import PaymentIcon from '../components/PaymentIcon';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
@@ -29,6 +30,7 @@ const paymentSepehrEvents = new NativeEventEmitter(PaymentSepehrModule);
 
 function Payment({ navigation, route }: { navigation: any, route: any }): React.JSX.Element {
   const { totalAmount, finalAmountToPay, creditUsed, creditOption, transactionResult } = route.params;
+  console.log('Payment Result', totalAmount, finalAmountToPay, creditUsed, creditOption, transactionResult);
   const { showError } = useSnackbarContext();
   //console.log('transactionResult', transactionResult);
   const [result, setResult] = useState('');
@@ -46,8 +48,16 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
   };
 
   const call = async (fn: string, ...args: any[]) => {
+    console.log('call', fn, args);
     try {
       const res = await PaymentModule[fn](...args);
+      console.log('call res', res);
+      if (!res.success) {
+        showError(res.message);
+        navigation.goBack();
+        throw new Error(res);
+        return
+      }
       setResult(JSON.stringify(res, null, 2));
     } catch (e: any) {
       setResult(e.message || JSON.stringify(e));
@@ -86,6 +96,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
     const sub = paymentEvents.addListener('PaymentResult', (res) => {
       setEventResult(JSON.stringify(res, null, 2));
       //Alert.alert('PaymentResult Event', JSON.stringify(res, null, 2));
+
       if (res.resultCode === 0) {
         navigation.reset({
           index: 0,
@@ -197,12 +208,10 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
     console.log('iban2', iban2);
     console.log('iban2Error', iban2Error);
     console.log('isIban2Valid', isIban2Valid);
-    setTimeout(() => {
-      // Only require IBAN2 validation if it's actually being used (tashimPercent2 > 0)
-      if (tashimPercent2 > 0 && (iban2 && isIban2Valid)) {
-        handlePayment();
-      }
-    }, 1000)
+    if (iban2 && isIban2Valid && tashimPercent2 > 0) {
+      console.log('handlePayment22');
+      handlePayment();
+    }
   }, [iban2, isIban2Valid, tashimPercent2]);
 
   // Function to handle payment with IBAN validation
@@ -222,10 +231,12 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
       // Pass empty string for IBAN2 if percent2 is 0 or less
       const iban1ToUse = tashimPercent1 > 0 ? iban1 : "";
       const iban2ToUse = tashimPercent2 > 0 ? iban2 : "";
-
-      call('buttonTashim', (finalAmountToPay * 10).toString(), (Math.random() * 1000000).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
+      console.log('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
+      call('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
     }
   };
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -254,6 +265,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
           <Text style={styles.mainText}>در حال انتقال</Text>
         </View>
       </View>
+
     </SafeAreaView>
   );
 }
@@ -288,7 +300,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF2F3',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-
   },
   scrollContent: {
     paddingHorizontal: 20,

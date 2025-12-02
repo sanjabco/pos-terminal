@@ -15,13 +15,15 @@ import {
   TouchableOpacity,
   Dimensions,
   ScrollView,
+  Modal,
 } from 'react-native';
 import ArrowRight from '../components/ArrowRight';
 import MoneyIcon from '../components/MoneyIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useServiceContext } from '../providers/ServiceProvider';
-import { useCreateTransaction } from '../hooks/useApi';
+import { useCreateTransaction, useLinesDropdown } from '../hooks/useApi';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
+import { useAuth } from '../hooks/useAuth';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,10 +40,15 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [finalAmountToPay, setFinalAmountToPay] = useState<number>(0);
   const [customerData, setCustomerData] = useState<any>(null);
-  const [branchId, setBranchId] = useState<number>(92); // Default branch ID
+  const { selectedBranch } = useAuth();
+  const [branchId, setBranchId] = useState<number>(selectedBranch?.id || 92); // Default branch ID
+  const [showMaxUsageModal, setShowMaxUsageModal] = useState<boolean>(false);
 
   // Get service context to access selected services and amounts
   const { selectedServices, getTotalAmount, getServicesWithPrices } = useServiceContext();
+
+  // Fetch lines data to get maxPayAmountByCashBack
+  const { data: linesData } = useLinesDropdown(selectedBranch?.id || branchId);
 
   // Transaction mutation
   const createTransactionMutation = useCreateTransaction();
@@ -60,6 +67,42 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
     setSelectedOption(optionId);
   };
 
+  // Calculate max credit usage for each line and total
+  const calculateMaxCreditUsage = () => {
+    const servicesWithPrices = getServicesWithPrices();
+    const lines = linesData?.Data?.lines || [];
+
+    let totalMaxUsage = 0;
+    const maxUsagePerLine: { lineId: number; lineTitle: string; maxUsage: number }[] = [];
+
+    servicesWithPrices.forEach(service => {
+      const lineId = parseInt(service.id);
+      const line = lines.find((l: any) => l.id === lineId);
+      const serviceAmount = parseFloat(service.amount?.replace(/,/g, '') || '0');
+
+      if (line) {
+        const maxPayAmountByCashBack = line.maxPayAmountByCashBack / 10 || 0;
+        const maxUsage = Math.min(serviceAmount, maxPayAmountByCashBack);
+        totalMaxUsage += maxUsage;
+        maxUsagePerLine.push({
+          lineId,
+          lineTitle: service.title,
+          maxUsage
+        });
+      } else {
+        // If line not found, use service amount as max (no limit)
+        totalMaxUsage += serviceAmount;
+        maxUsagePerLine.push({
+          lineId,
+          lineTitle: service.title,
+          maxUsage: serviceAmount
+        });
+      }
+    });
+
+    return { totalMaxUsage, maxUsagePerLine };
+  };
+
   // Calculate total credit used across all services
   const calculateTotalCreditUsed = (): number => {
     if (selectedOption !== 'useCredit' || credit <= 0) {
@@ -67,13 +110,18 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
     }
 
     const servicesWithPrices = getServicesWithPrices();
+    const { maxUsagePerLine } = calculateMaxCreditUsage();
     let remainingCredit = credit;
     let totalCreditUsed = 0;
 
     servicesWithPrices.forEach(service => {
       const serviceAmount = parseFloat(service.amount?.replace(/,/g, '') || '0');
+      const lineId = parseInt(service.id);
+      const lineMaxUsage = maxUsagePerLine.find(item => item.lineId === lineId)?.maxUsage || serviceAmount;
+
       if (remainingCredit > 0 && serviceAmount > 0) {
-        const creditUsedForService = Math.min(serviceAmount, remainingCredit);
+        // Spend credit on this service (up to the service amount, remaining credit, or max credit usage for this line)
+        const creditUsedForService = Math.min(serviceAmount, remainingCredit, lineMaxUsage);
         totalCreditUsed += creditUsedForService;
         remainingCredit -= creditUsedForService;
       }
@@ -100,23 +148,26 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   // Function to calculate credit spending for each service
   const calculateCreditSpending = () => {
     const servicesWithPrices = getServicesWithPrices();
+    const { maxUsagePerLine } = calculateMaxCreditUsage();
     let remainingCredit = selectedOption === 'useCredit' ? credit : 0;
 
     return servicesWithPrices.map(service => {
       const serviceAmount = parseFloat(service.amount?.replace(/,/g, '') || '0');
+      const lineId = parseInt(service.id);
+      const lineMaxUsage = maxUsagePerLine.find(item => item.lineId === lineId)?.maxUsage || serviceAmount;
       let payFromCredit = 0;
 
       if (remainingCredit > 0 && serviceAmount > 0) {
-        // Spend credit on this service (up to the service amount or remaining credit)
-        payFromCredit = Math.min(serviceAmount, remainingCredit);
+        // Spend credit on this service (up to the service amount, remaining credit, or max credit usage for this line)
+        payFromCredit = Math.min(serviceAmount, remainingCredit, lineMaxUsage);
         remainingCredit -= payFromCredit;
       }
 
       return {
         lineId: parseInt(service.id),
         lineTitle: service.title,
-        price: service.amount?.replace(/,/g, '') || '0',
-        payFromCredit: Math.round(payFromCredit),
+        price: (Math.round(parseFloat(service.amount?.replace(/,/g, '') || '0') * 10)).toString() || '0',
+        payFromCredit: Math.round(payFromCredit * 10),
         description: '',
         PaymentMethod: 'پوز - پوز آبی'
       };
@@ -136,13 +187,13 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
     return result;
   };
 
-  // Function to handle transaction
-  const handleTransaction = async () => {
+  // Function to prepare transaction data
+  const prepareTransactionData = async () => {
     // Get phone number from AsyncStorage
     const phoneNumber = await AsyncStorage.getItem('phoneNumber');
     if (!phoneNumber) {
       showError('شماره تلفن یافت نشد');
-      return;
+      return null;
     }
 
     // Convert Persian phone number to English
@@ -151,63 +202,99 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
     const servicesWithPrices = getServicesWithPrices();
     if (servicesWithPrices.length === 0) {
       showError('لطفاً حداقل یک سرویس با مبلغ انتخاب کنید');
-      return;
+      return null;
     }
 
     const cashBackDto = calculateCreditSpending();
 
-    const transactionData = {
+    return {
       cashBackDto,
       cardNumber: englishPhoneNumber,
       shouldSendMessage: false,
       branchId
     };
+  };
 
-    if (finalAmountToPay > 0) {
+  // Function to handle cash payment
+  const handleCashPayment = async () => {
+    const transactionData = await prepareTransactionData();
+    if (!transactionData) return;
 
-      navigation.navigate('Payment', {
-        totalAmount: finalAmountToPay,
-        finalAmountToPay: finalAmountToPay,
-        creditUsed: calculateTotalCreditUsed(),
-        creditOption: selectedOption,
-        transactionResult: transactionData
-      });
-    }
-    else {
-      //sendTransaction(transactionData);
+    try {
+      //const response = await createTransactionMutation.mutateAsync(transactionData);
+
+      // Transaction successful
       navigation.navigate('Success', {
         totalAmount: totalAmount,
         finalAmountToPay: finalAmountToPay,
         creditUsed: calculateTotalCreditUsed(),
         creditOption: selectedOption,
         transactionResult: transactionData,
+        paymentMethod: 'cash',
+        result: '',
+        eventResult: ''
+      });
+
+    } catch (error: any) {
+      console.error('Transaction error:', error);
+      showError(error?.response?.data?.Message || 'خطا در ارتباط با سرور');
+    }
+  };
+
+  // Function to handle card payment
+  const handleCardPayment = async () => {
+    const transactionData = await prepareTransactionData();
+    if (!transactionData) return;
+
+    if (finalAmountToPay > 0) {
+      navigation.navigate('Payment', {
+        totalAmount: totalAmount,
+        finalAmountToPay: finalAmountToPay,
+        creditUsed: calculateTotalCreditUsed(),
+        creditOption: selectedOption,
+        transactionResult: transactionData
+      });
+    } else {
+      // If no amount to pay, go directly to success
+      navigation.navigate('Success', {
+        totalAmount: totalAmount,
+        finalAmountToPay: finalAmountToPay,
+        creditUsed: calculateTotalCreditUsed(),
+        creditOption: selectedOption,
+        transactionResult: transactionData,
+        paymentMethod: 'cash',
         result: '',
         eventResult: ''
       });
     }
+  };
 
-    /*  try {
-       const response = await createTransactionMutation.mutateAsync(transactionData);
- 
-       if (response.Code === 200) {
-         // Transaction successful
-         const result = response.Data.result[0];
- 
-         // Navigate to Success screen with transaction details
-         navigation.navigate('Success', {
-           totalAmount: result.totalPriceWithoutCreditPayment,
-           finalAmountToPay: result.totalPrice,
-           creditUsed: calculateTotalCreditUsed(),
-           creditOption: selectedOption,
-           transactionResult: result
-         });
-       } else {
-         showError(response.Message || 'خطا در انجام تراکنش');
-       }
-     } catch (error) {
-       console.error('Transaction error:', error);
-       showError('خطا در ارتباط با سرور');
-     } */
+  // Function to handle submit when total amount is zero
+  const handleSubmit = async () => {
+    const transactionData = await prepareTransactionData();
+    if (!transactionData) return;
+
+    try {
+      const response = await createTransactionMutation.mutateAsync(transactionData);
+
+      if (response.Code === 200) {
+        // Transaction successful
+        navigation.navigate('Success', {
+          totalAmount: totalAmount,
+          finalAmountToPay: finalAmountToPay,
+          creditUsed: calculateTotalCreditUsed(),
+          creditOption: selectedOption,
+          transactionResult: response.Data || transactionData,
+          result: '',
+          eventResult: ''
+        });
+      } else {
+        showError(response.Message || 'خطا در انجام تراکنش');
+      }
+    } catch (error: any) {
+      console.error('Transaction error:', error);
+      showError(error?.response?.data?.Message || 'خطا در ارتباط با سرور');
+    }
   };
   /*  const [responseData, setResponseData] = React.useState<any>(null);
  
@@ -222,15 +309,20 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
      }
    } */
 
+
   useEffect(() => {
     const loadSavedData = async () => {
       try {
         const customerData = await AsyncStorage.getItem('customerData');
+        const savedBranchId = await AsyncStorage.getItem('branchId');
+        if (savedBranchId) {
+          setBranchId(parseInt(savedBranchId));
+        }
         if (customerData) {
           const customerDataJson = JSON.parse(customerData);
           console.log('customer', customerDataJson);
 
-          const creditAmount = parseInt(customerDataJson.credit.replace(/,/g, ''));
+          const creditAmount = Math.round(parseInt(customerDataJson.credit.replace(/,/g, '')) / 10);
           setCredit(creditAmount);
           setCustomerData(customerDataJson);
 
@@ -277,11 +369,33 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
           <View style={styles.creditIconContainer}>
             <MoneyIcon height={42} />
           </View>
-          <Text style={styles.creditLabel}>اعتبار قابل استفاده</Text>
-          <View style={styles.amountContainer}>
-            <Text style={styles.currencyText}>تومان</Text>
-            <Text style={styles.amountText}>{formatNumberWithSeparator(credit)}</Text>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={styles.creditLabel}>کل اعتبار: </Text>
+            <View style={styles.amountContainer}>
+              <Text style={styles.currencyText}>تومان</Text>
+              <Text style={styles.amountText}>{formatNumberWithSeparator(credit)}</Text>
+            </View>
           </View>
+          {selectedOption === 'useCredit' && selectedServices.length > 0 && finalAmountToPay > 0 && (() => {
+            const { totalMaxUsage, maxUsagePerLine } = calculateMaxCreditUsage();
+            return totalMaxUsage > 0 ? (
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={styles.maxUsageRow}>
+                  <Text style={[styles.creditLabel, { fontSize: 12 }]}>حداکثر اعتبار قابل استفاده: </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowMaxUsageModal(true)}
+                    style={styles.infoIconButton}
+                  >
+                    <Text style={styles.infoIcon}>ℹ️</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.amountContainer}>
+                  <Text style={[styles.currencyText, { fontSize: 12 }]}>تومان</Text>
+                  <Text style={[styles.amountText, { fontSize: 12 }]}>{formatNumberWithSeparator(totalMaxUsage)}</Text>
+                </View>
+              </View>
+            ) : null;
+          })()}
         </View>
 
         {/* Option Buttons - Only show if credit > 0 */}
@@ -314,28 +428,17 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
         )}
 
         {/* Credit Usage Summary */}
-        {selectedOption === 'useCredit' && credit > 0 && totalAmount > 0 && (
-          <View style={styles.creditSummary}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatNumberWithSeparator(totalAmount)} تومان</Text>
-              <Text style={styles.summaryLabel}>مبلغ کل:</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{formatNumberWithSeparator(credit)} تومان</Text>
-              <Text style={styles.summaryLabel}>اعتبار قابل استفاده:</Text>
-            </View>
-            <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-              <Text style={styles.summaryValue}>
-                {formatNumberWithSeparator(calculateTotalCreditUsed())} تومان
-              </Text>
-              <Text style={styles.summaryLabel}>اعتبار استفاده شده:</Text>
-            </View>
-          </View>
-        )}
+
       </ScrollView>
 
       {/* Amount Display Bar */}
       <View style={styles.amountBar}>
+        {selectedOption === 'useCredit' && credit > 0 && totalAmount > 0 && (
+          <View style={styles.amountInfo}>
+            <Text style={styles.amountBarValue}> {formatNumberWithSeparator(totalAmount)} تومان </Text>
+            <Text style={styles.amountBarLabel}> مبلغ کل </Text>
+          </View>
+        )}
         <View style={styles.amountInfo}>
           <Text style={styles.amountBarValue}>
             {formatNumberWithSeparator(finalAmountToPay)} تومان
@@ -354,17 +457,77 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
         )}
       </View>
 
-      {/* Continue Button */}
-      <TouchableOpacity
-        onPress={handleTransaction}
-        style={[
-          styles.continueButton,
-        ]}
+      {/* Payment Buttons */}
+      {finalAmountToPay === 0 ? (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={handleSubmit}
+            style={styles.submitButton}
+          >
+            <Text style={styles.buttonText}>ثبت</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={handleCashPayment}
+            style={styles.cashButton}
+          >
+            <Text style={styles.buttonText}>پرداخت نقدی</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleCardPayment}
+            style={styles.cardButton}
+          >
+            <Text style={styles.buttonText}>پرداخت کارتی</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Max Usage Bottom Sheet */}
+      <Modal
+        visible={showMaxUsageModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowMaxUsageModal(false)}
       >
-        <Text style={styles.continueButtonText}>
-          ادامه
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.bottomSheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMaxUsageModal(false)}
+        >
+          <View style={styles.bottomSheetContainer}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.bottomSheetHandle} />
+              <View style={styles.bottomSheetHeader}>
+                <Text style={styles.bottomSheetTitle}>حداکثر استفاده از اعتبار به تفکیک سرویس</Text>
+                <TouchableOpacity
+                  onPress={() => setShowMaxUsageModal(false)}
+                  style={styles.bottomSheetCloseButton}
+                >
+                  <Text style={styles.bottomSheetCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.bottomSheetBody}>
+                {(() => {
+                  const { maxUsagePerLine } = calculateMaxCreditUsage();
+                  return maxUsagePerLine.map((item, index) => (
+                    <View key={index} style={styles.bottomSheetLineItem}>
+                      <Text style={styles.bottomSheetLineTitle}>{item.lineTitle}</Text>
+                      <Text style={styles.bottomSheetLineValue}>
+                        {formatNumberWithSeparator(item.maxUsage)} تومان
+                      </Text>
+                    </View>
+                  ));
+                })()}
+              </ScrollView>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -411,12 +574,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 30,
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   creditCard: {
     backgroundColor: '#FFD700',
     borderRadius: 15,
-    height: 150,
+    minHeight: 150,
     padding: 25,
     alignItems: 'center',
     marginBottom: 30,
@@ -458,6 +621,96 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
     fontFamily: 'IRANSansWebFaNum-Medium',
+  },
+  maxUsageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoIconButton: {
+    padding: 4,
+  },
+  infoIcon: {
+    fontSize: 16,
+  },
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: height * 0.8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D0D0D0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontFamily: 'IRANSansWebFaNum-Bold',
+    color: '#000',
+    flex: 1,
+    textAlign: 'right',
+  },
+  bottomSheetCloseButton: {
+    padding: 4,
+    marginLeft: 10,
+  },
+  bottomSheetCloseText: {
+    fontSize: 24,
+    color: '#666',
+    fontFamily: 'IRANSansWebFaNum',
+  },
+  bottomSheetBody: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    maxHeight: height * 0.6,
+  },
+  bottomSheetLineItem: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  bottomSheetLineTitle: {
+    fontSize: 16,
+    fontFamily: 'IRANSansWebFaNum-Medium',
+    color: '#333',
+    flex: 1,
+    textAlign: 'right',
+  },
+  bottomSheetLineValue: {
+    fontSize: 16,
+    fontFamily: 'IRANSansWebFaNum-Bold',
+    color: '#000',
+    marginLeft: 12,
   },
   optionsContainer: {
     marginBottom: 20,
@@ -597,7 +850,54 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontFamily: 'IRANSansWebFaNum-Bold',
   },
-  continueButton: {
+  buttonContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#EFF2F3',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  cashButton: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 18,
+    borderRadius: 0,
+    marginRight: 0,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardButton: {
+    flex: 1,
+    backgroundColor: '#FF6B35',
+    paddingVertical: 18,
+    borderRadius: 0,
+    marginLeft: 0,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  submitButton: {
+    flex: 1,
     backgroundColor: '#4CAF50',
     paddingVertical: 18,
     borderRadius: 0,
@@ -610,10 +910,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  continueButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  continueButtonText: {
+  buttonText: {
     color: 'white',
     fontSize: 18,
     fontFamily: 'IRANSansWebFaNum-Bold',

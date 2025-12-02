@@ -94,6 +94,9 @@ export const API_ENDPOINTS = {
 
     // Transaction endpoints
     TRANSACTION: '/Transaction',
+
+    // Cashback endpoints
+    CASHBACKS: '/cash-back',
 } as const;
 
 // Types for API responses
@@ -284,5 +287,28 @@ export interface TransactionResponse {
     Code: number;
     Data: {
         result: TransactionResult[];
+    };
+}
+
+export interface CashBack {
+    id: number;
+    cashBackPercentage: number;
+    branchSharePercentage: number;
+    maxCashBackCreditPay: string;
+    fromDate: string;
+    toDate: string;
+    expirationInDays: number;
+    lineId: number;
+    lineTitle: string;
+    branchId: number;
+    branchTitle: string;
+    businessId: number;
+}
+
+export interface CashBacksResponse {
+    Message: string;
+    Code: number;
+    Data: {
+        cashBackModel: CashBack[];
     };
 } 

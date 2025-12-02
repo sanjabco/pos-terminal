@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     SafeAreaView,
     StatusBar,
@@ -43,7 +43,11 @@ function Service({ navigation, route }: { navigation: any; route: any }): React.
 
     // Use the selected branch to get services
     const { data: servicesData, isLoading, error, refetch } = useLinesDropdown(selectedBranch?.id || 0);
-
+    useEffect(() => {
+        if (error) {
+            navigation.replace('BranchSelection');
+        }
+    }, [error]);
     return (
         <AuthGuard navigation={navigation} route={route} requireAuth={true} requireBranch={true}>
             <ServiceContent
@@ -137,10 +141,17 @@ function ServiceContent({
         return (
             <SafeAreaView style={styles.container}>
                 <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+                {/* Header Section */}
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
                         <Image style={{ height: 70 }} resizeMode='contain' source={require('../assets/images/logo.png')} />
+                        <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutPress}>
+                            <Text style={styles.logoutButtonText}>خروج</Text>
+                        </TouchableOpacity>
                     </View>
+                    {/* <View style={styles.branchInfo}>
+                    <Text style={styles.branchTitle}>{selectedBranch.title}</Text>
+                </View> */}
                 </View>
                 <View style={styles.contentCard}>
                     <View style={styles.errorContainer}>
@@ -154,6 +165,10 @@ function ServiceContent({
         );
     }
 
+    const handleBranchChangePress = () => {
+        navigation.navigate('BranchSelection');
+    };
+
     // Get services from API response (lines from the selected branch)
     const services = (servicesData?.Data as any)?.lines || [];
 
@@ -166,6 +181,9 @@ function ServiceContent({
             {/* Header Section */}
             <View style={styles.header}>
                 <View style={styles.headerContent}>
+                    <TouchableOpacity style={styles.changeBranchButton} onPress={handleBranchChangePress}>
+                        <Text style={styles.logoutButtonText}>شعبه</Text>
+                    </TouchableOpacity>
                     <Image style={{ height: 70 }} resizeMode='contain' source={require('../assets/images/logo.png')} />
                     <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutPress}>
                         <Text style={styles.logoutButtonText}>خروج</Text>
@@ -179,7 +197,7 @@ function ServiceContent({
             {/* Main Content Card */}
             <View style={styles.contentCard}>
                 <Text style={styles.instructionText}>ابتدا بخش مورد نظر را انتخاب کنید</Text>
-                <TouchableOpacity onPress={() => { navigation.navigate('NativePaymentTest') }}><Text>Test</Text></TouchableOpacity>
+                {/* <TouchableOpacity onPress={() => { navigation.navigate('NativePaymentTest') }}><Text>Test</Text></TouchableOpacity> */}
                 <View style={styles.serviceOptionsContainer}>
                     <ScrollView contentContainerStyle={{ paddingBottom: 150 }} >
                         {services.map((service: any) => {
@@ -420,6 +438,15 @@ const styles = StyleSheet.create({
     logoutButton: {
         position: 'absolute',
         right: 20,
+        top: 40,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    changeBranchButton: {
+        position: 'absolute',
+        left: 20,
         top: 40,
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         paddingHorizontal: 15,
