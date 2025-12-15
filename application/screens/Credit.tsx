@@ -41,14 +41,14 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const [finalAmountToPay, setFinalAmountToPay] = useState<number>(0);
   const [customerData, setCustomerData] = useState<any>(null);
   const { selectedBranch } = useAuth();
-  const [branchId, setBranchId] = useState<number>(selectedBranch?.id || 92); // Default branch ID
+
   const [showMaxUsageModal, setShowMaxUsageModal] = useState<boolean>(false);
 
   // Get service context to access selected services and amounts
   const { selectedServices, getTotalAmount, getServicesWithPrices } = useServiceContext();
 
   // Fetch lines data to get maxPayAmountByCashBack
-  const { data: linesData } = useLinesDropdown(selectedBranch?.id || branchId);
+  const { data: linesData } = useLinesDropdown(selectedBranch?.id || '');
 
   // Transaction mutation
   const createTransactionMutation = useCreateTransaction();
@@ -211,7 +211,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       cashBackDto,
       cardNumber: englishPhoneNumber,
       shouldSendMessage: false,
-      branchId
+      branchId: selectedBranch?.id || ''
     };
   };
 
@@ -315,9 +315,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       try {
         const customerData = await AsyncStorage.getItem('customerData');
         const savedBranchId = await AsyncStorage.getItem('branchId');
-        if (savedBranchId) {
-          setBranchId(parseInt(savedBranchId));
-        }
+
         if (customerData) {
           const customerDataJson = JSON.parse(customerData);
           console.log('customer', customerDataJson);
@@ -471,15 +469,15 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={handleCashPayment}
-            style={styles.cashButton}
+            style={styles.cardButton}
           >
-            <Text style={styles.buttonText}>پرداخت نقدی</Text>
+            <Text style={styles.buttonText}>نقدی</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleCardPayment}
-            style={styles.cardButton}
+            style={styles.cashButton}
           >
-            <Text style={styles.buttonText}>پرداخت کارتی</Text>
+            <Text style={styles.buttonText}>کارت خوان</Text>
           </TouchableOpacity>
         </View>
       )}

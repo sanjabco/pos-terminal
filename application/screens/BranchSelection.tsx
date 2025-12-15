@@ -13,6 +13,7 @@ import { useBranches } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
 import { AuthGuard } from '../components/AuthGuard';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
+import { useServiceContext } from '../providers/ServiceProvider';
 
 interface BranchSelectionProps {
     navigation: any;
@@ -46,8 +47,12 @@ function BranchSelectionContent({
     setSelectedBranch
 }: any): React.JSX.Element {
     const { showError } = useSnackbarContext();
+    const { clearServices } = useServiceContext();
     const handleBranchSelection = async (branch: any) => {
         try {
+            // Clear selected services when branch changes
+            clearServices();
+
             // Save selected branch
             await setSelectedBranch(branch);
 

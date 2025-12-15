@@ -65,68 +65,75 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
   };
 
   useEffect(() => {
-    const sub = paymentSepehrEvents.addListener('SepehrPaymentResult', (res) => {
-      setSepehrEventResult(JSON.stringify(res, null, 2));
-      //Alert.alert('SepehrPaymentResult Event', JSON.stringify(res, null, 2));
-      if (res.resultCode2 == '00') {
-        navigation.reset({
-          index: 0,
-          routes: [{
-            name: 'Success', params: {
-              totalAmount: totalAmount,
-              finalAmountToPay: finalAmountToPay,
-              creditUsed: creditUsed,
-              creditOption: creditOption,
-              transactionResult: transactionResult,
-              result: sepehrResult,
-              eventResult: JSON.stringify(res, null, 2)
-            }
-          }],
-        });
+    if (POS_TYPE === 'sepehr') {
+      const sub = paymentSepehrEvents.addListener('SepehrPaymentResult', (res) => {
+        setSepehrEventResult(JSON.stringify(res, null, 2));
+        //Alert.alert('SepehrPaymentResult Event', JSON.stringify(res, null, 2));
+        console.log('SPaymentResult Event', res);
 
-      } else {
-        showError('پرداخت انجام نشد');
-        navigation.goBack();
-      }
-    });
-    return () => sub.remove();
+        if (res.resultCode2 == '00') {
+          navigation.reset({
+            index: 0,
+            routes: [{
+              name: 'Success', params: {
+                totalAmount: totalAmount,
+                finalAmountToPay: finalAmountToPay,
+                creditUsed: creditUsed,
+                creditOption: creditOption,
+                transactionResult: transactionResult,
+                result: sepehrResult,
+                eventResult: JSON.stringify(res, null, 2)
+              }
+            }],
+          });
+
+        } else {
+          showError('پرداخت انجام نشد');
+          navigation.goBack();
+        }
+      });
+      return () => sub.remove();
+    }
   }, []);
 
   useEffect(() => {
-    const sub = paymentEvents.addListener('PaymentResult', (res) => {
-      setEventResult(JSON.stringify(res, null, 2));
-      //Alert.alert('PaymentResult Event', JSON.stringify(res, null, 2));
+    if (POS_TYPE !== 'sepehr') {
+      const sub = paymentEvents.addListener('PaymentResult', (res) => {
+        setEventResult(JSON.stringify(res, null, 2));
+        //Alert.alert('PaymentResult Event', JSON.stringify(res, null, 2));
+        console.log('PaymentResult Event', res);
 
-      if (res.resultCode === 0) {
-        navigation.reset({
-          index: 0,
-          routes: [{
-            name: 'Success', params: {
-              totalAmount: totalAmount,
-              finalAmountToPay: finalAmountToPay,
-              creditUsed: creditUsed,
-              creditOption: creditOption,
-              transactionResult: transactionResult,
-              result: result,
-              eventResult: JSON.stringify(res, null, 2)
-            }
-          }],
-        });
-        /* navigation.navigate('Success', {
-          totalAmount: totalAmount,
-          finalAmountToPay: finalAmountToPay,
-          creditUsed: creditUsed,
-          creditOption: creditOption,
-          transactionResult: transactionResult,
-          result: result,
-          eventResult: JSON.stringify(res, null, 2)
-        }) */
-      } else {
-        showError('پرداخت انجام نشد');
-        navigation.goBack();
-      }
-    });
-    return () => sub.remove();
+        if (res.error == '' && res.resultCode === 0) {
+          navigation.reset({
+            index: 0,
+            routes: [{
+              name: 'Success', params: {
+                totalAmount: totalAmount,
+                finalAmountToPay: finalAmountToPay,
+                creditUsed: creditUsed,
+                creditOption: creditOption,
+                transactionResult: transactionResult,
+                result: result,
+                eventResult: JSON.stringify(res, null, 2)
+              }
+            }],
+          });
+          /* navigation.navigate('Success', {
+            totalAmount: totalAmount,
+            finalAmountToPay: finalAmountToPay,
+            creditUsed: creditUsed,
+            creditOption: creditOption,
+            transactionResult: transactionResult,
+            result: result,
+            eventResult: JSON.stringify(res, null, 2)
+          }) */
+        } else {
+          showError(res.txResponseTitle || res.message || 'پرداخت انجام نشد');
+          navigation.goBack();
+        }
+      });
+      return () => sub.remove();
+    }
   }, []);
   const businessInfo = useBusinessInfo();
   const calcTashimPercent = () => {
@@ -134,7 +141,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
       return 1;
     }
     else {
-      return 3;
+      return 5;
     }
     /* const myShare = finalAmountToPay * 3 / 100;
     if (myShare > 30000) {
@@ -210,9 +217,17 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
     console.log('isIban2Valid', isIban2Valid);
     if (iban2 && isIban2Valid && tashimPercent2 > 0) {
       console.log('handlePayment22');
-      handlePayment();
+      //handlePayment();
     }
   }, [iban2, isIban2Valid, tashimPercent2]);
+
+  useEffect(() => {
+    if (POS_TYPE === 'sepehr') {
+      callSepehr('purchase', (finalAmountToPay * 10).toString(), "1");
+    } else {
+      call('purchaseWithId', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), true, true);
+    }
+  }, []);
 
   // Function to handle payment with IBAN validation
   const handlePayment = () => {
@@ -231,8 +246,9 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
       // Pass empty string for IBAN2 if percent2 is 0 or less
       const iban1ToUse = tashimPercent1 > 0 ? iban1 : "";
       const iban2ToUse = tashimPercent2 > 0 ? iban2 : "";
-      console.log('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
+      //console.log('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
       call('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
+
     }
   };
 

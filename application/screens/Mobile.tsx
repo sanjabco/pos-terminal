@@ -42,8 +42,11 @@ const { width, height } = Dimensions.get('window');
 function Mobile({ navigation }: MobileProps): React.JSX.Element {
   const [phoneNumber, setPhoneNumber] = useState('');
   const { selectedBranch } = useAuth();
-  const [branchId, setBranchId] = useState(selectedBranch?.id || 92); // Default branch ID as per your request
-  console.log('branchId', branchId, selectedBranch);
+  console.log('selectedBranch', selectedBranch);
+
+
+
+
   const [isValidPhone, setIsValidPhone] = useState(false);
   const [isDataSaved, setIsDataSaved] = useState(false);
   const phoneInputRef = useRef<TextInput>(null);
@@ -64,7 +67,7 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
   const englishPhoneNumber = convertPersianToEnglish(phoneNumber);
 
   // Use the customer API hook
-  const { data: customerData, isLoading, error, refetch } = useCustomer(englishPhoneNumber, branchId);
+  const { data: customerData, isLoading, error, refetch } = useCustomer(englishPhoneNumber, selectedBranch?.id?.toString() || '');
   console.log('customerData', customerData);
 
   // Use the cashbacks API hook
@@ -115,7 +118,7 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
       try {
         await AsyncStorage.setItem('customerData', JSON.stringify(customerData.Data));
         await AsyncStorage.setItem('phoneNumber', phoneNumber);
-        await AsyncStorage.setItem('branchId', branchId.toString());
+        await AsyncStorage.setItem('branchId', selectedBranch?.id?.toString());
         setIsDataSaved(true);
         //Alert.alert('موفقیت', 'اطلاعات مشتری با موفقیت ذخیره شد'v);
       } catch (error) {
@@ -131,14 +134,14 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
       try {
         const savedPhone = await AsyncStorage.getItem('phoneNumber');
         const savedBranchId = await AsyncStorage.getItem('branchId');
+        console.log('savedBranchId', savedBranchId);
+
         const savedCustomerData = await AsyncStorage.getItem('customerData');
 
         if (savedPhone) {
           setPhoneNumber(savedPhone);
         }
-        if (savedBranchId) {
-          setBranchId(parseInt(savedBranchId));
-        }
+
         if (savedCustomerData) {
           setIsDataSaved(true);
         }
@@ -255,7 +258,7 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
               try {
                 await AsyncStorage.setItem('customerData', JSON.stringify(defaultCustomerData));
                 await AsyncStorage.setItem('phoneNumber', phoneNumber);
-                await AsyncStorage.setItem('branchId', branchId.toString());
+                await AsyncStorage.setItem('branchId', selectedBranch?.id?.toString());
                 setIsDataSaved(true);
               } catch (error) {
                 console.error('Error saving default customer data:', error);
@@ -337,7 +340,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cashbackMessage: {
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: 'IRANSansWebFaNum-Medium',
     color: '#000',
     textAlign: 'center',

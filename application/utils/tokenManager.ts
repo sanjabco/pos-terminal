@@ -118,7 +118,7 @@ export class TokenManager {
     static async storeSelectedBranch(branch: Branch): Promise<void> {
         try {
             await AsyncStorage.setItem(SELECTED_BRANCH_KEY, JSON.stringify(branch));
-            console.log('Selected branch stored successfully');
+            console.log('Selected branch stored successfully', branch);
         } catch (error) {
             console.error('Error storing selected branch:', error);
             throw error;

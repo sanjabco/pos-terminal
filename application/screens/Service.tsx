@@ -19,6 +19,7 @@ import {
     Pressable,
     ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLinesDropdown } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
 import { useServiceContext } from '../providers/ServiceProvider';
@@ -81,6 +82,7 @@ function ServiceContent({
     refetch
 }: any): React.JSX.Element {
     const { showError } = useSnackbarContext();
+    const { clearServices } = useServiceContext();
 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -100,7 +102,16 @@ function ServiceContent({
     const handleLogoutConfirm = async () => {
         try {
             setShowLogoutModal(false);
+
+            // Clear all saved data from AsyncStorage
+            await AsyncStorage.multiRemove(['customerData', 'phoneNumber', 'branchId']);
+
+            // Clear selected services
+            clearServices();
+
+            // Perform logout (clears auth data)
             await logout();
+
             // Explicitly navigate to Login screen after logout
             navigation.reset({
                 index: 0,
