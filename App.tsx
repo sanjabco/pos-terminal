@@ -5,10 +5,13 @@
  * @format
  */
 
+import './ota';
 import React from 'react';
+import { OTAUpdateProvider } from 'ota-updater';
+import { Fonts } from './application/config/fonts';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { AppBootstrap } from './application/components/AppBootstrap';
 
 // Import existing screen components
 import Service from './application/screens/Service';
@@ -28,7 +31,6 @@ import { QueryProvider } from './application/providers/QueryProvider';
 import { ServiceProvider } from './application/providers/ServiceProvider';
 import { InternetProvider } from './application/providers/InternetProvider';
 import { SnackbarProvider } from './application/providers/SnackbarProvider';
-import InternetGuard from './application/components/InternetGuard';
 import { useAuth } from './application/hooks/useAuth';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
@@ -36,16 +38,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 const Stack = createStackNavigator();
 
 function AppContent(): React.JSX.Element {
-  const { isAuthenticated, isLoading, selectedBranch } = useAuth();
-
-  // Show loading screen while checking authentication status
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
-      </View>
-    );
-  }
+  const { isAuthenticated, selectedBranch } = useAuth();
 
   // Determine initial route based on authentication status
   let initialRouteName = 'Login';
@@ -128,7 +121,7 @@ function AppContent(): React.JSX.Element {
   );
 }
 
-function App(): React.JSX.Element {
+function AppProviders({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <QueryProvider>
       <ServiceProvider>
@@ -136,26 +129,41 @@ function App(): React.JSX.Element {
           <SnackbarProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
-                <InternetGuard>
-                  <AppContent />
-                </InternetGuard>
+                <AppBootstrap>{children}</AppBootstrap>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </SnackbarProvider>
         </InternetProvider>
       </ServiceProvider>
     </QueryProvider>
-
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FF6B35',
-  },
-});
+function App(): React.JSX.Element {
+  const app = (
+    <AppProviders>
+      <AppContent />
+    </AppProviders>
+  );
+
+  return (
+    <OTAUpdateProvider
+      autoSync
+      skipInDev
+      fontFamily={Fonts.regular}
+      messages={{
+        title: 'به\u200cروزرسانی برنامه',
+        checking: 'در حال بررسی به\u200cروزرسانی...',
+        downloading: 'در حال دانلود به\u200cروزرسانی...',
+        installing: 'در حال نصب به\u200cروزرسانی...',
+        restarting: 'در حال راه\u200cاندازی مجدد...',
+        error: 'خطا در به\u200cروزرسانی',
+        upToDate: 'برنامه به\u200cروز است',
+      }}
+    >
+      {app}
+    </OTAUpdateProvider>
+  );
+}
 
 export default App;

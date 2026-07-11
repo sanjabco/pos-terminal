@@ -19,6 +19,7 @@ import ArrowRight from '../components/ArrowRight';
 import SaleIcon from '../components/SaleIcon';
 import CashbackIcon from '../components/CashbackIcon';
 import CreditIcon from '../components/CreditIcon';
+import { CURRENCY_LABEL } from '../utils/currency';
 
 const { width, height } = Dimensions.get('window');
 
@@ -58,8 +59,8 @@ function Report(): React.JSX.Element {
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>مجموع فروش</Text>
               <View style={styles.valueContainer}>
-                <Text style={styles.cardValue}>۱۹.۰۰۰.۰۰۰</Text>
-                <Text style={styles.currency}> تومان</Text>
+                <Text style={styles.cardValue}>۱۹۰.۰۰۰.۰۰۰</Text>
+                <Text style={styles.currency}> {CURRENCY_LABEL}</Text>
               </View>
             </View>
             <View style={styles.cardIcon}>
@@ -74,8 +75,8 @@ function Report(): React.JSX.Element {
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>کش بک کل</Text>
               <View style={styles.valueContainer}>
-                <Text style={styles.cardValue}>۹۶.۵۰۰</Text>
-                <Text style={styles.currency}> تومان</Text>
+                <Text style={styles.cardValue}>۹۶۵.۰۰۰</Text>
+                <Text style={styles.currency}> {CURRENCY_LABEL}</Text>
               </View>
             </View>
             <View style={styles.cardIcon}>
@@ -90,8 +91,8 @@ function Report(): React.JSX.Element {
             <View style={styles.cardText}>
               <Text style={styles.cardTitle}>اعتبار استفاده شده</Text>
               <View style={styles.valueContainer}>
-                <Text style={styles.cardValue}>۱۰۷۱۸۰۵۰۰</Text>
-                <Text style={styles.currency}> تومان</Text>
+                <Text style={styles.cardValue}>۱.۰۷۱.۸۰۵.۰۰۰</Text>
+                <Text style={styles.currency}> {CURRENCY_LABEL}</Text>
               </View>
             </View>
             <View style={styles.cardIcon}>

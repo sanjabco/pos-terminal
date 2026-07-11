@@ -103,7 +103,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
         //Alert.alert('PaymentResult Event', JSON.stringify(res, null, 2));
         console.log('PaymentResult Event', res);
 
-        if (res.error == '' && res.resultCode === 0) {
+        if (res.error && res.error != '' || !res.error && res.resultCode === 0) {
           navigation.reset({
             index: 0,
             routes: [{
@@ -137,7 +137,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
   }, []);
   const businessInfo = useBusinessInfo();
   const calcTashimPercent = () => {
-    if (finalAmountToPay > 3000000) {
+    if (finalAmountToPay > 30000000) {
       return 1;
     }
     else {
@@ -223,9 +223,9 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
 
   useEffect(() => {
     if (POS_TYPE === 'sepehr') {
-      callSepehr('purchase', (finalAmountToPay * 10).toString(), "1");
+      callSepehr('purchase', finalAmountToPay.toString(), "1");
     } else {
-      call('purchaseWithId', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), true, true);
+      call('purchaseWithId', finalAmountToPay.toString(), (Math.round(Math.random() * 10000000000)).toString(), true, true);
     }
   }, []);
 
@@ -238,7 +238,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
     }
 
     if (POS_TYPE === 'sepehr') {
-      callSepehr('purchase', (finalAmountToPay * 10).toString(), "1");
+      callSepehr('purchase', finalAmountToPay.toString(), "1");
     } else {
       console.log('POS_TYPE', POS_TYPE);
       // Use clean IBAN for payment processing
@@ -247,7 +247,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
       const iban1ToUse = tashimPercent1 > 0 ? iban1 : "";
       const iban2ToUse = tashimPercent2 > 0 ? iban2 : "";
       //console.log('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
-      call('buttonTashim', (finalAmountToPay * 10).toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
+      call('buttonTashim', finalAmountToPay.toString(), (Math.round(Math.random() * 10000000000)).toString(), parseInt(tashimPercent1.toString()), parseInt(tashimPercent2.toString()), iban1ToUse, iban2ToUse, true, true);
 
     }
   };

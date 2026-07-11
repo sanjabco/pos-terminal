@@ -24,13 +24,9 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { useCreateTransaction } from '../hooks/useApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
+import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
 
 const { width, height } = Dimensions.get('window');
-
-// Function to format number with thousands separator
-const formatNumberWithSeparator = (num: number): string => {
-  return num?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
 
 function Success({ navigation, route }: { navigation: any; route: any }): React.JSX.Element {
   // Get service context to clear services after transaction
@@ -44,13 +40,14 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
   // State to store response data
   const [responseData, setResponseData] = React.useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(true);
+  const [transactionFailed, setTransactionFailed] = useState<boolean>(false);
 
   // Extract values from response data or fallback to route params
   const resultData = responseData?.result?.[0] || {};
   const totalAmount = transactionData?.totalAmount || 0;
   const finalAmountToPay = transactionData?.finalAmountToPay || 0;
   const creditUsed = transactionData?.creditUsed || 0;
-  const payBackAmount = resultData?.payBackAmount / 10 || 0;
+  const payBackAmount = resultData?.payBackAmount || 0;
   const result = transactionData?.result || '';
   const eventResult = transactionData?.eventResult || '';
 
@@ -73,7 +70,8 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
         setResponseData(response.Data);
       } catch (error) {
         console.error('Transaction error:', error);
-        showError('خطا در ارتباط با سرور');
+        setTransactionFailed(true);
+        showError('خطا در ثبت تراکنش. لطفاً با پشتیبانی تماس بگیرید.');
       } finally {
         setIsSubmitting(false);
       }
@@ -151,6 +149,11 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
           <ActivityIndicator size="large" color="#FF6B00" />
           <Text style={styles.loadingText}>در حال ثبت تراکنش...</Text>
         </View>
+      ) : transactionFailed ? (
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: '#E74C3C' }]}>ثبت تراکنش ناموفق بود</Text>
+          <Text style={styles.loadingText}>در صورت کسر مبلغ از کارت، با پشتیبانی تماس بگیرید.</Text>
+        </View>
       ) : (
         <ScrollView>
           {/* Main Content Card */}
@@ -176,7 +179,7 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>کش بک جدید</Text>
                 <View style={styles.amountContainer}>
-                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
                   <Text style={styles.amountText}>{formatNumberWithSeparator(payBackAmount)}</Text>
                 </View>
               </View>
@@ -185,7 +188,7 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>مبلغ کل</Text>
                 <View style={styles.amountContainer}>
-                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
                   <Text style={styles.amountText}>{formatNumberWithSeparator(totalAmount)}</Text>
                 </View>
               </View>
@@ -194,7 +197,7 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>مبلغ قابل پرداخت</Text>
                 <View style={styles.amountContainer}>
-                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
                   <Text style={styles.amountText}>{formatNumberWithSeparator(finalAmountToPay)}</Text>
                 </View>
               </View>
@@ -204,7 +207,7 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
                 <View style={styles.infoSection}>
                   <Text style={styles.infoLabel}>اعتبار استفاده شده</Text>
                   <View style={styles.amountContainer}>
-                    <Text style={styles.currencyText}>تومان</Text>
+                    <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
                     <Text style={styles.amountText}>{formatNumberWithSeparator(creditUsed)}</Text>
                   </View>
                 </View>

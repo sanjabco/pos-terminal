@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse, type CashBacksResponse } from '../services/api';
+import { apiClient, apiRequest, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse, type CashBacksResponse } from '../services/api';
 import { TokenManager } from '../utils/tokenManager';
 
 // Query keys for React Query
@@ -55,8 +55,7 @@ export const queryKeys = {
 export const useSendOtp = () => {
     return useMutation({
         mutationFn: async (request: SendOtpRequest): Promise<SendOtpResponse> => {
-            const response = await apiClient.post(API_ENDPOINTS.LOGIN_OTP, request);
-            return response.data;
+            return apiRequest<SendOtpResponse>('POST', API_ENDPOINTS.LOGIN_OTP, request);
         },
     });
 };
@@ -66,8 +65,7 @@ export const useVerifyOtp = () => {
 
     return useMutation({
         mutationFn: async (request: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
-            const response = await apiClient.post(API_ENDPOINTS.LOGIN_OTP_CHECK, request);
-            return response.data;
+            return apiRequest<VerifyOtpResponse>('POST', API_ENDPOINTS.LOGIN_OTP_CHECK, request);
         },
         onSuccess: async (data) => {
             // Store token in AsyncStorage or secure storage if login successful

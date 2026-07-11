@@ -227,7 +227,7 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
               <Text style={styles.customerInfoTitle}>اطلاعات مشتری:</Text>
               <Text style={styles.customerInfoText}>نام: {customerData.Data.name}</Text>
               <Text style={styles.customerInfoText}>شماره تلفن: {customerData.Data.userPhoneNumber}</Text>
-              <Text style={styles.customerInfoText}>اعتبار: {customerData.Data.credit} تومان</Text>
+              <Text style={styles.customerInfoText}>اعتبار: {customerData.Data.credit} ریال</Text>
               {customerData.Data.subscriptionCode && (
                 <Text style={styles.customerInfoText}>کد اشتراک: {customerData.Data.subscriptionCode}</Text>
               )}

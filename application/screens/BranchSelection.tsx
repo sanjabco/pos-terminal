@@ -118,6 +118,7 @@ function BranchSelectionContent({
             </View>
             <View style={styles.contentCard}>
                 <Text style={styles.instructionText}>لطفاً شعبه مورد نظر خود را انتخاب کنید</Text>
+
                 <FlatList
                     data={branches}
                     keyExtractor={(item) => item.id.toString()}

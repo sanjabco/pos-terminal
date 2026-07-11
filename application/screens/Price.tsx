@@ -19,32 +19,15 @@ import {
 } from 'react-native';
 import ArrowRight from '../components/ArrowRight';
 import { useServiceContext } from '../providers/ServiceProvider';
+import { CURRENCY_LABEL, formatAmountInput } from '../utils/currency';
 
 const { width, height } = Dimensions.get('window');
 
 function Price({ navigation }: { navigation: any }): React.JSX.Element {
   const { selectedServices, updateServiceAmount, getTotalAmount, validateAllAmounts } = useServiceContext();
 
-  // Function to format number with thousand separators
-  const formatNumberWithSeparator = (text: string): string => {
-    // Remove all non-digit characters except decimal point
-    const cleanText = text.replace(/[^\d.]/g, '');
-
-    // Split by decimal point
-    const parts = cleanText.split('.');
-    const integerPart = parts[0];
-    const decimalPart = parts[1] || '';
-
-    // Add thousand separators to integer part
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    // Combine with decimal part if exists
-    return decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
-  };
-
-  // Function to handle amount change with formatting
   const handleAmountChange = (serviceId: string, text: string) => {
-    const formattedText = formatNumberWithSeparator(text);
+    const formattedText = formatAmountInput(text);
     updateServiceAmount(serviceId, formattedText);
   };
 
@@ -73,7 +56,7 @@ function Price({ navigation }: { navigation: any }): React.JSX.Element {
               <Text style={styles.inputLabel}>مبلغ خرید {service.title}</Text>
               <View style={styles.inputContainer}>
                 <View style={styles.currencyTag}>
-                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
                 </View>
                 <TextInput
                   style={styles.amountInput}
@@ -94,7 +77,7 @@ function Price({ navigation }: { navigation: any }): React.JSX.Element {
               <Text style={styles.totalLabel}>مجموع کل:</Text>
               <View style={styles.totalContainer}>
                 <View style={styles.currencyTag}>
-                  <Text style={styles.currencyText}>تومان</Text>
+                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
                 </View>
                 <Text style={styles.totalAmount}>
                   {getTotalAmount().toLocaleString()}

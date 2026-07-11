@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     SafeAreaView,
     StatusBar,
@@ -8,27 +8,35 @@ import {
     TouchableOpacity,
     TextInput,
     Dimensions,
-    KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
+    NativeSyntheticEvent,
+    TextInputKeyPressEventData,
 } from 'react-native';
-import { useSendOtp, useVerifyOtp, useBusinessInfo } from '../hooks/useApi';
+import { useSendOtp, useVerifyOtp } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
 import { AuthGuard } from '../components/AuthGuard';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
-import { apiClient, API_ENDPOINTS } from '../services/api';
+import { apiClient, API_ENDPOINTS, getApiErrorMessage } from '../services/api';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+const OTP_LENGTH = 5;
+const OTP_BOX_SIZE = Math.min(52, (width - 50 - (OTP_LENGTH - 1) * 8) / OTP_LENGTH);
+
+const createEmptyOtp = () => Array(OTP_LENGTH).fill('');
+
+const convertPersianToEnglish = (value: string): string => {
+    const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    return value.replace(/[۰-۹]/g, digit => String(persianDigits.indexOf(digit)));
+};
 
 function Login({ navigation, route }: { navigation: any; route: any }): React.JSX.Element {
     const [step, setStep] = useState<'mobile' | 'otp'>('mobile');
     const [mobile, setMobile] = useState('');
-    const [otp, setOtp] = useState('');
 
-    // React Query OTP mutations
     const sendOtpMutation = useSendOtp();
     const verifyOtpMutation = useVerifyOtp();
-
-    // Auth hook
     const { login, setBusinessProfile } = useAuth();
 
     return (
@@ -39,8 +47,6 @@ function Login({ navigation, route }: { navigation: any; route: any }): React.JS
                 setStep={setStep}
                 mobile={mobile}
                 setMobile={setMobile}
-                otp={otp}
-                setOtp={setOtp}
                 sendOtpMutation={sendOtpMutation}
                 verifyOtpMutation={verifyOtpMutation}
                 login={login}
@@ -56,14 +62,30 @@ function LoginContent({
     setStep,
     mobile,
     setMobile,
-    otp,
-    setOtp,
     sendOtpMutation,
     verifyOtpMutation,
     login,
     setBusinessProfile
 }: any): React.JSX.Element {
     const { showError } = useSnackbarContext();
+    const [isCompletingLogin, setIsCompletingLogin] = useState(false);
+    const [otpDigits, setOtpDigits] = useState<string[]>(createEmptyOtp);
+    const otpInputRefs = useRef<(TextInput | null)[]>([]);
+    const hasSubmittedOtpRef = useRef(false);
+
+    const otp = otpDigits.join('');
+    const isSendingOtp = sendOtpMutation.isPending;
+    const isVerifyingOtp = verifyOtpMutation.isPending || isCompletingLogin;
+
+    const clearOtp = useCallback(() => {
+        setOtpDigits(createEmptyOtp());
+        hasSubmittedOtpRef.current = false;
+    }, []);
+
+    const resetOtpInput = useCallback(() => {
+        clearOtp();
+        setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
+    }, [clearOtp]);
 
     // Function to fetch and store business info
     const fetchAndStoreBusinessInfo = async () => {
@@ -84,9 +106,9 @@ function LoginContent({
     };
 
     const handleSendOtp = () => {
-        // Send OTP to mobile number
+        const phoneNumber = convertPersianToEnglish(mobile);
         sendOtpMutation.mutate(
-            { phoneNumber: mobile },
+            { phoneNumber },
             {
                 onSuccess: (data: any) => {
                     console.log('OTP sent successfully:', data);
@@ -98,51 +120,143 @@ function LoginContent({
                 },
                 onError: (error: any) => {
                     console.error('Failed to send OTP:', error);
-                    showError('خطا در ارسال کد تایید. لطفاً دوباره تلاش کنید.');
+                    showError(getApiErrorMessage(error, 'خطا در ارسال کد تایید. لطفاً دوباره تلاش کنید.'));
                 },
             }
         );
     };
 
-    const handleVerifyOtp = () => {
-        console.log('otp', otp);
-        console.log('mobile', mobile);
-        // Verify OTP and login
+    const handleEditNumber = () => {
+        clearOtp();
+        setStep('mobile');
+    };
+
+    const handleVerifyOtp = useCallback((code?: string) => {
+        const otpCode = code ?? otpDigits.join('');
+        if (otpCode.length !== OTP_LENGTH || isVerifyingOtp) {
+            return;
+        }
+
+        const phoneNumber = convertPersianToEnglish(mobile);
         verifyOtpMutation.mutate(
-            { phoneNumber: mobile, code: otp },
+            { phoneNumber, code: otpCode },
             {
                 onSuccess: async (data: any) => {
                     console.log('Login successful:', data);
                     if (data.Code === 200 && data.Message === 'SUCCESS') {
-                        // Use the login function from useAuth hook
+                        setIsCompletingLogin(true);
                         try {
                             const success = await login(data.Data.token);
                             if (success) {
                                 console.log('Login successful and token stored');
 
-                                // Fetch and store business info
                                 await fetchAndStoreBusinessInfo();
 
-                                // Navigate to branch selection
                                 navigation.replace('BranchSelection');
                             } else {
                                 showError('خطا در ذخیره اطلاعات ورود.');
+                                resetOtpInput();
                             }
                         } catch (error) {
                             console.error('Error during login:', error);
                             showError('خطا در ذخیره اطلاعات ورود.');
+                            resetOtpInput();
+                        } finally {
+                            setIsCompletingLogin(false);
                         }
                     } else {
                         showError(data.Message || 'کد وارد شده صحیح نیست.');
+                        resetOtpInput();
                     }
                 },
                 onError: (error: any) => {
                     console.error('Login failed:', error);
-                    showError('کد وارد شده صحیح نیست. لطفاً دوباره تلاش کنید.');
+                    showError(getApiErrorMessage(error, 'کد وارد شده صحیح نیست. لطفاً دوباره تلاش کنید.'));
+                    resetOtpInput();
                 },
             }
         );
+    }, [
+        isVerifyingOtp,
+        login,
+        mobile,
+        navigation,
+        otpDigits,
+        resetOtpInput,
+        showError,
+        verifyOtpMutation,
+    ]);
+
+    const handleOtpChange = (text: string, index: number) => {
+        const normalized = convertPersianToEnglish(text).replace(/\D/g, '');
+
+        if (!normalized) {
+            const cleared = [...otpDigits];
+            cleared[index] = '';
+            setOtpDigits(cleared);
+            hasSubmittedOtpRef.current = false;
+            return;
+        }
+
+        if (normalized.length > 1) {
+            const chars = normalized.slice(0, OTP_LENGTH).split('');
+            const nextDigits = [...otpDigits];
+            chars.forEach((char, offset) => {
+                if (index + offset < OTP_LENGTH) {
+                    nextDigits[index + offset] = char;
+                }
+            });
+            setOtpDigits(nextDigits);
+            hasSubmittedOtpRef.current = false;
+
+            const focusIndex = Math.min(index + chars.length, OTP_LENGTH - 1);
+            otpInputRefs.current[focusIndex]?.focus();
+            return;
+        }
+
+        const nextDigits = [...otpDigits];
+        nextDigits[index] = normalized;
+        setOtpDigits(nextDigits);
+        hasSubmittedOtpRef.current = false;
+
+        if (index < OTP_LENGTH - 1) {
+            otpInputRefs.current[index + 1]?.focus();
+        }
     };
+
+    const handleOtpKeyPress = (
+        event: NativeSyntheticEvent<TextInputKeyPressEventData>,
+        index: number,
+    ) => {
+        if (event.nativeEvent.key === 'Backspace' && !otpDigits[index] && index > 0) {
+            const nextDigits = [...otpDigits];
+            nextDigits[index - 1] = '';
+            setOtpDigits(nextDigits);
+            hasSubmittedOtpRef.current = false;
+            otpInputRefs.current[index - 1]?.focus();
+        }
+    };
+
+    useEffect(() => {
+        if (step === 'otp') {
+            const timer = setTimeout(() => otpInputRefs.current[0]?.focus(), 150);
+            return () => clearTimeout(timer);
+        }
+
+        clearOtp();
+    }, [step, clearOtp]);
+
+    useEffect(() => {
+        if (
+            step === 'otp' &&
+            otp.length === OTP_LENGTH &&
+            !isVerifyingOtp &&
+            !hasSubmittedOtpRef.current
+        ) {
+            hasSubmittedOtpRef.current = true;
+            handleVerifyOtp(otp);
+        }
+    }, [step, otp, isVerifyingOtp, handleVerifyOtp]);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -173,43 +287,78 @@ function LoginContent({
                                     maxLength={11}
                                     placeholder="مثلاً 09123456789"
                                     placeholderTextColor="#AAA"
-                                />
-                            </View>
-                            <TouchableOpacity
-                                style={styles.continueButton}
-                                onPress={handleSendOtp}
-                                disabled={mobile.length !== 11}
-                            >
-                                <Text style={styles.continueButtonText}>ارسال کد</Text>
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <>
-                            <Text style={styles.instructionText}>کد تایید ارسال شده را وارد کنید</Text>
-                            <View style={styles.inputContainer}>
-                                <TextInput
-                                    style={styles.input}
-                                    value={otp}
-                                    onChangeText={setOtp}
-                                    keyboardType="numeric"
-                                    textAlign="center"
-                                    maxLength={5}
-                                    placeholder="کد ۵ رقمی"
-                                    placeholderTextColor="#AAA"
+                                    editable={!isSendingOtp}
                                 />
                             </View>
                             <TouchableOpacity
                                 style={[
                                     styles.continueButton,
-                                    verifyOtpMutation.isPending && styles.disabledButton
+                                    (mobile.length !== 11 || isSendingOtp) && styles.disabledButton,
                                 ]}
-                                onPress={handleVerifyOtp}
-                                disabled={otp.length !== 5 || verifyOtpMutation.isPending}
+                                onPress={handleSendOtp}
+                                disabled={mobile.length !== 11 || isSendingOtp}
                             >
-                                <Text style={styles.continueButtonText}>
-                                    {verifyOtpMutation.isPending ? 'در حال ورود...' : 'ورود'}
-                                </Text>
+                                {isSendingOtp ? (
+                                    <View style={styles.loadingButtonContent}>
+                                        <ActivityIndicator color="#fff" size="small" />
+                                        <Text style={styles.continueButtonText}>در حال ارسال کد...</Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.continueButtonText}>ارسال کد</Text>
+                                )}
                             </TouchableOpacity>
+                        </>
+                    ) : (
+                        <>
+                            <Text style={styles.instructionText}>
+                                کد تایید ارسال شده به شماره{' '}
+                                <Text style={styles.instructionPhoneNumber}>{mobile}</Text>
+                                {' '}را وارد کنید
+                            </Text>
+                            <TouchableOpacity
+                                onPress={handleEditNumber}
+                                disabled={isVerifyingOtp}
+                                style={[
+                                    styles.editNumberRow,
+                                    isVerifyingOtp && styles.disabledEditButton,
+                                ]}
+                            >
+                                <Text style={styles.editNumberText}>ویرایش شماره</Text>
+                            </TouchableOpacity>
+                            <View style={styles.otpContainer}>
+                                {otpDigits.map((digit, index) => (
+                                    <TextInput
+                                        key={index}
+                                        ref={ref => {
+                                            otpInputRefs.current[index] = ref;
+                                        }}
+                                        style={[
+                                            styles.otpInput,
+                                            { width: OTP_BOX_SIZE, height: OTP_BOX_SIZE },
+                                            digit ? styles.otpInputFilled : null,
+                                            isVerifyingOtp && styles.otpInputDisabled,
+                                        ]}
+                                        value={digit}
+                                        onChangeText={text => handleOtpChange(text, index)}
+                                        onKeyPress={event => handleOtpKeyPress(event, index)}
+                                        keyboardType="number-pad"
+                                        maxLength={OTP_LENGTH}
+                                        selectTextOnFocus
+                                        editable={!isVerifyingOtp}
+                                        textAlign="center"
+                                        textContentType="oneTimeCode"
+                                        autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
+                                    />
+                                ))}
+                            </View>
+                            {isVerifyingOtp && (
+                                <View style={[styles.continueButton, styles.disabledButton]}>
+                                    <View style={styles.loadingButtonContent}>
+                                        <ActivityIndicator color="#fff" size="small" />
+                                        <Text style={styles.continueButtonText}>در حال ورود...</Text>
+                                    </View>
+                                </View>
+                            )}
                         </>
                     )}
                 </View>
@@ -262,11 +411,57 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
         textAlign: 'center',
-        marginBottom: 30,
+        marginBottom: 12,
         fontFamily: 'IRANSansWebFaNum-Medium',
+        lineHeight: 28,
+        writingDirection: 'rtl',
+    },
+    instructionPhoneNumber: {
+        fontFamily: 'IRANSansWebFaNum-Bold',
+        color: '#FF6B35',
+        writingDirection: 'ltr',
+    },
+    editNumberRow: {
+        alignSelf: 'flex-end',
+        marginBottom: 24,
+        paddingVertical: 4,
+    },
+    editNumberText: {
+        fontSize: 14,
+        color: '#FF6B35',
+        fontFamily: 'IRANSansWebFaNum-Bold',
+        textAlign: 'right',
+        writingDirection: 'rtl',
+    },
+    disabledEditButton: {
+        opacity: 0.5,
     },
     inputContainer: {
         marginBottom: 40,
+    },
+    otpContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 40,
+        writingDirection: 'ltr',
+    },
+    otpInput: {
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        fontSize: 22,
+        backgroundColor: 'white',
+        fontFamily: 'IRANSansWebFaNum-Bold',
+        color: '#333',
+        padding: 0,
+    },
+    otpInputFilled: {
+        borderColor: '#FF6B35',
+    },
+    otpInputDisabled: {
+        opacity: 0.6,
     },
     input: {
         borderWidth: 1,
@@ -304,6 +499,12 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.6,
+    },
+    loadingButtonContent: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
     },
 });
 

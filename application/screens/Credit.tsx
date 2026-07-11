@@ -24,6 +24,7 @@ import { useServiceContext } from '../providers/ServiceProvider';
 import { useCreateTransaction, useLinesDropdown } from '../hooks/useApi';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { useAuth } from '../hooks/useAuth';
+import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
 
 const { width, height } = Dimensions.get('window');
 
@@ -53,11 +54,6 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   // Transaction mutation
   const createTransactionMutation = useCreateTransaction();
 
-  // Function to format number with thousands separator
-  const formatNumberWithSeparator = (num: number): string => {
-    return num?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  };
-
   const creditOptions: CreditOption[] = [
     { id: 'useCredit', title: 'استفاده از اعتبار', selected: true },
     { id: 'saveForLater', title: 'ذخیره برای بعد', selected: false },
@@ -81,7 +77,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       const serviceAmount = parseFloat(service.amount?.replace(/,/g, '') || '0');
 
       if (line) {
-        const maxPayAmountByCashBack = line.maxPayAmountByCashBack / 10 || 0;
+        const maxPayAmountByCashBack = line.maxPayAmountByCashBack || 0;
         const maxUsage = Math.min(serviceAmount, maxPayAmountByCashBack);
         totalMaxUsage += maxUsage;
         maxUsagePerLine.push({
@@ -166,8 +162,8 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       return {
         lineId: parseInt(service.id),
         lineTitle: service.title,
-        price: (Math.round(parseFloat(service.amount?.replace(/,/g, '') || '0') * 10)).toString() || '0',
-        payFromCredit: Math.round(payFromCredit * 10),
+        price: (Math.round(parseFloat(service.amount?.replace(/,/g, '') || '0'))).toString() || '0',
+        payFromCredit: Math.round(payFromCredit),
         description: '',
         PaymentMethod: 'پوز - پوز آبی'
       };
@@ -210,7 +206,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
     return {
       cashBackDto,
       cardNumber: englishPhoneNumber,
-      shouldSendMessage: false,
+      shouldSendMessage: true,
       branchId: selectedBranch?.id || ''
     };
   };
@@ -222,12 +218,12 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
 
     try {
       //const response = await createTransactionMutation.mutateAsync(transactionData);
-
+      const total = calculateTotalCreditUsed()
       // Transaction successful
       navigation.navigate('Success', {
         totalAmount: totalAmount,
         finalAmountToPay: finalAmountToPay,
-        creditUsed: calculateTotalCreditUsed(),
+        creditUsed: total,
         creditOption: selectedOption,
         transactionResult: transactionData,
         paymentMethod: 'cash',
@@ -245,12 +241,12 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const handleCardPayment = async () => {
     const transactionData = await prepareTransactionData();
     if (!transactionData) return;
-
+    const total = calculateTotalCreditUsed()
     if (finalAmountToPay > 0) {
       navigation.navigate('Payment', {
         totalAmount: totalAmount,
         finalAmountToPay: finalAmountToPay,
-        creditUsed: calculateTotalCreditUsed(),
+        creditUsed: total,
         creditOption: selectedOption,
         transactionResult: transactionData
       });
@@ -259,7 +255,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       navigation.navigate('Success', {
         totalAmount: totalAmount,
         finalAmountToPay: finalAmountToPay,
-        creditUsed: calculateTotalCreditUsed(),
+        creditUsed: total,
         creditOption: selectedOption,
         transactionResult: transactionData,
         paymentMethod: 'cash',
@@ -275,22 +271,18 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
     if (!transactionData) return;
 
     try {
-      const response = await createTransactionMutation.mutateAsync(transactionData);
+      const total = calculateTotalCreditUsed()
+      // Transaction successful
+      navigation.navigate('Success', {
+        totalAmount: totalAmount,
+        finalAmountToPay: finalAmountToPay,
+        creditUsed: total,
+        creditOption: selectedOption,
+        transactionResult: transactionData,
+        result: '',
+        eventResult: ''
+      });
 
-      if (response.Code === 200) {
-        // Transaction successful
-        navigation.navigate('Success', {
-          totalAmount: totalAmount,
-          finalAmountToPay: finalAmountToPay,
-          creditUsed: calculateTotalCreditUsed(),
-          creditOption: selectedOption,
-          transactionResult: response.Data || transactionData,
-          result: '',
-          eventResult: ''
-        });
-      } else {
-        showError(response.Message || 'خطا در انجام تراکنش');
-      }
     } catch (error: any) {
       console.error('Transaction error:', error);
       showError(error?.response?.data?.Message || 'خطا در ارتباط با سرور');
@@ -320,7 +312,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
           const customerDataJson = JSON.parse(customerData);
           console.log('customer', customerDataJson);
 
-          const creditAmount = Math.round(parseInt(customerDataJson.credit.replace(/,/g, '')) / 10);
+          const creditAmount = Math.round(parseInt(customerDataJson.credit.replace(/,/g, '')));
           setCredit(creditAmount);
           setCustomerData(customerDataJson);
 
@@ -370,7 +362,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={styles.creditLabel}>کل اعتبار: </Text>
             <View style={styles.amountContainer}>
-              <Text style={styles.currencyText}>تومان</Text>
+              <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
               <Text style={styles.amountText}>{formatNumberWithSeparator(credit)}</Text>
             </View>
           </View>
@@ -388,7 +380,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.amountContainer}>
-                  <Text style={[styles.currencyText, { fontSize: 12 }]}>تومان</Text>
+                  <Text style={[styles.currencyText, { fontSize: 12 }]}>{CURRENCY_LABEL}</Text>
                   <Text style={[styles.amountText, { fontSize: 12 }]}>{formatNumberWithSeparator(totalMaxUsage)}</Text>
                 </View>
               </View>
@@ -433,20 +425,20 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       <View style={styles.amountBar}>
         {selectedOption === 'useCredit' && credit > 0 && totalAmount > 0 && (
           <View style={styles.amountInfo}>
-            <Text style={styles.amountBarValue}> {formatNumberWithSeparator(totalAmount)} تومان </Text>
+            <Text style={styles.amountBarValue}> {formatNumberWithSeparator(totalAmount)} {CURRENCY_LABEL} </Text>
             <Text style={styles.amountBarLabel}> مبلغ کل </Text>
           </View>
         )}
         <View style={styles.amountInfo}>
           <Text style={styles.amountBarValue}>
-            {formatNumberWithSeparator(finalAmountToPay)} تومان
+            {formatNumberWithSeparator(finalAmountToPay)} {CURRENCY_LABEL}
           </Text>
           <Text style={styles.amountBarLabel}>مبلغ قابل پرداخت</Text>
         </View>
         {selectedOption === 'useCredit' && credit > 0 && totalAmount > 0 && (
           <View style={styles.creditInfo}>
             <Text style={styles.originalAmountText}>
-              {formatNumberWithSeparator(calculateTotalCreditUsed())} تومان
+              {formatNumberWithSeparator(calculateTotalCreditUsed())} {CURRENCY_LABEL}
             </Text>
             <Text style={styles.creditDeductionText}>
               اعتبار استفاده شده
@@ -516,7 +508,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
                     <View key={index} style={styles.bottomSheetLineItem}>
                       <Text style={styles.bottomSheetLineTitle}>{item.lineTitle}</Text>
                       <Text style={styles.bottomSheetLineValue}>
-                        {formatNumberWithSeparator(item.maxUsage)} تومان
+                        {formatNumberWithSeparator(item.maxUsage)} {CURRENCY_LABEL}
                       </Text>
                     </View>
                   ));
