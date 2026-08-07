@@ -180,6 +180,7 @@ export const API_ENDPOINTS = {
 
   // Transaction endpoints
   TRANSACTION: '/transaction',
+  SHARE_DISCOUNT_PREVIEW: '/transaction/share-discount-preview',
 
   // Cashback endpoints
   CASHBACKS: '/cash-back',
@@ -338,18 +339,34 @@ export interface CustomerResponse {
   Data: Customer;
 }
 
+export interface CustomerActiveDiscount {
+  id: number;
+  percent: number;
+  fixedAmount?: number;
+  type: number;
+  typeLabel: string;
+  toDate: string;
+  lineId?: number;
+  lineTitle?: string;
+  branchId?: number;
+}
+
 export interface Customer {
-  credit: string;
+  credit: string | number;
+  creditInTomans?: number;
   userPhoneNumber: string;
-  subscriptionCode: string;
+  subscriptionCode?: string | null;
   name: string;
+  discounts?: CustomerActiveDiscount[];
+  isNewCustomer?: boolean;
 }
 
 export interface CashBackDto {
   lineId: number;
   lineTitle: string;
-  price: string;
+  price: string | number;
   payFromCredit: number;
+  paidByCash?: number;
   description: string;
   PaymentMethod: string;
 }
@@ -359,6 +376,10 @@ export interface TransactionRequest {
   cardNumber: string;
   shouldSendMessage: boolean;
   branchId: number;
+  applyCredit?: boolean;
+  applyDiscount?: boolean;
+  confirmNewCustomer?: boolean;
+  customerName?: string;
 }
 
 export interface TransactionResult {
@@ -366,6 +387,31 @@ export interface TransactionResult {
   payBackAmount: number;
   totalPrice: number;
   totalPriceWithoutCreditPayment: number;
+  discountAmount?: number;
+}
+
+export interface ShareDiscountPreviewItem {
+  businessId: number;
+  businessTitle: string;
+  discountPercent: number;
+  expirationDays: number;
+  distanceKm?: number | null;
+}
+
+export interface ShareDiscountPreviewRequest {
+  phoneNumber: string;
+  branchId: number;
+  amount?: number;
+  lineIds?: number[];
+}
+
+export interface ShareDiscountPreviewResponse {
+  Message: string;
+  Code: number;
+  Data: {
+    sharingEnabled: boolean;
+    items: ShareDiscountPreviewItem[];
+  };
 }
 
 export interface TransactionResponse {

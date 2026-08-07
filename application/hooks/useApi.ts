@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, apiRequest, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse, type CashBacksResponse } from '../services/api';
+import { apiClient, apiRequest, API_ENDPOINTS, type ApiResponse, type SendOtpRequest, type SendOtpResponse, type VerifyOtpRequest, type VerifyOtpResponse, type Payment, type Report, type Service, type Credit, type MobileOperator, type Price, type UserProfile, type UserProfileResponse, type Branch, type Line, type BranchesResponse, type BranchResponse, type LinesDropdownResponse, type Customer, type CustomerResponse, type TransactionRequest, type TransactionResponse, type BusinessInfoResponse, type CashBacksResponse, type ShareDiscountPreviewRequest, type ShareDiscountPreviewResponse } from '../services/api';
 import { TokenManager } from '../utils/tokenManager';
 
 // Query keys for React Query
@@ -49,6 +49,10 @@ export const queryKeys = {
 
     // Cashbacks
     cashbacks: ['cashbacks'] as const,
+
+    // Share discount preview
+    shareDiscountPreview: (phoneNumber: string, branchId: number, amount: number, lineIds: string) =>
+        ['shareDiscountPreview', phoneNumber, branchId, amount, lineIds] as const,
 } as const;
 
 // Authentication hooks
@@ -370,4 +374,12 @@ export const useCashbacks = () => {
             return response.data;
         },
     });
+};
+
+// Smart sharing preview
+export const fetchShareDiscountPreview = async (
+    request: ShareDiscountPreviewRequest,
+): Promise<ShareDiscountPreviewResponse> => {
+    const response = await apiClient.post(API_ENDPOINTS.SHARE_DISCOUNT_PREVIEW, request);
+    return response.data;
 }; 

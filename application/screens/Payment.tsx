@@ -29,7 +29,7 @@ const paymentEvents = new NativeEventEmitter(PaymentModule);
 const paymentSepehrEvents = new NativeEventEmitter(PaymentSepehrModule);
 
 function Payment({ navigation, route }: { navigation: any, route: any }): React.JSX.Element {
-  const { totalAmount, finalAmountToPay, creditUsed, creditOption, transactionResult } = route.params;
+  const { totalAmount, finalAmountToPay, creditUsed, creditOption, transactionResult, discountAmount } = route.params;
   console.log('Payment Result', totalAmount, finalAmountToPay, creditUsed, creditOption, transactionResult);
   const { showError } = useSnackbarContext();
   //console.log('transactionResult', transactionResult);
@@ -79,6 +79,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
                 totalAmount: totalAmount,
                 finalAmountToPay: finalAmountToPay,
                 creditUsed: creditUsed,
+                discountAmount: discountAmount || 0,
                 creditOption: creditOption,
                 transactionResult: transactionResult,
                 result: sepehrResult,
@@ -111,6 +112,7 @@ function Payment({ navigation, route }: { navigation: any, route: any }): React.
                 totalAmount: totalAmount,
                 finalAmountToPay: finalAmountToPay,
                 creditUsed: creditUsed,
+                discountAmount: discountAmount || 0,
                 creditOption: creditOption,
                 transactionResult: transactionResult,
                 result: result,

@@ -250,7 +250,9 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
               name: 'کاربر جدید',
               userPhoneNumber: englishPhoneNumber,
               credit: 0,
-              subscriptionCode: null
+              subscriptionCode: null,
+              discounts: [],
+              isNewCustomer: true,
             };
 
             // Save default customer data

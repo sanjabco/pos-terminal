@@ -47,6 +47,14 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
   const totalAmount = transactionData?.totalAmount || 0;
   const finalAmountToPay = transactionData?.finalAmountToPay || 0;
   const creditUsed = transactionData?.creditUsed || 0;
+  const discountAmount =
+    resultData?.discountAmount ||
+    transactionData?.discountAmount ||
+    (responseData?.result || []).reduce(
+      (sum: number, item: any) => sum + (Number(item?.discountAmount) || 0),
+      0,
+    ) ||
+    0;
   const payBackAmount = resultData?.payBackAmount || 0;
   const result = transactionData?.result || '';
   const eventResult = transactionData?.eventResult || '';
@@ -201,6 +209,16 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
                   <Text style={styles.amountText}>{formatNumberWithSeparator(finalAmountToPay)}</Text>
                 </View>
               </View>
+
+              {discountAmount > 0 && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.infoLabel}>تخفیف اعمال‌شده</Text>
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
+                    <Text style={styles.amountText}>{formatNumberWithSeparator(discountAmount)}</Text>
+                  </View>
+                </View>
+              )}
 
               {/* Credit Used Section */}
               {creditUsed > 0 && (
