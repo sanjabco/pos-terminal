@@ -18,6 +18,7 @@ import {
   Modal,
   ActivityIndicator,
   Switch,
+  TextInput,
 } from 'react-native';
 import ArrowRight from '../components/ArrowRight';
 import MoneyIcon from '../components/MoneyIcon';
@@ -58,6 +59,16 @@ const parseAmount = (value: unknown): number => {
   return 0;
 };
 
+/** Backend DiscountType: Birthday=4, Anniversary=5 */
+const isBirthdayDiscount = (d: CustomerActiveDiscount) =>
+  Number(d.type) === 4 || d.typeLabel?.includes('تولد');
+
+const isAnniversaryDiscount = (d: CustomerActiveDiscount) =>
+  Number(d.type) === 5 || d.typeLabel?.includes('سالگرد');
+
+const isOccasionDiscount = (d: CustomerActiveDiscount) =>
+  isBirthdayDiscount(d) || isAnniversaryDiscount(d);
+
 function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const { showError } = useSnackbarContext();
   const [selectedOption, setSelectedOption] = useState<string>('useCredit');
@@ -68,6 +79,8 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const [finalAmountToPay, setFinalAmountToPay] = useState<number>(0);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerNameError, setNewCustomerNameError] = useState('');
   const { selectedBranch } = useAuth();
 
   const [showMaxUsageModal, setShowMaxUsageModal] = useState<boolean>(false);
@@ -79,6 +92,8 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const { data: linesData } = useLinesDropdown(Number(selectedBranch?.id) || 0);
 
   const discounts = customerData?.discounts || [];
+  const occasionDiscounts = discounts.filter(isOccasionDiscount);
+  const otherDiscounts = discounts.filter((d) => !isOccasionDiscount(d));
   const hasDiscounts = discounts.length > 0;
   const applyCredit = selectedOption === 'useCredit' && credit > 0;
   const canApplyDiscount = hasDiscounts && !applyCredit;
@@ -222,6 +237,14 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       return null;
     }
 
+    const isNewCustomer = Boolean(customerData?.isNewCustomer);
+    const trimmedName = newCustomerName.trim();
+    if (isNewCustomer && !trimmedName) {
+      setNewCustomerNameError('نام مشتری الزامی است');
+      showError('لطفا نام مشتری را وارد کنید');
+      return null;
+    }
+
     const cashBackDto = calculateCreditSpending();
 
     return {
@@ -231,10 +254,8 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       branchId: Number(selectedBranch?.id) || 0,
       applyCredit,
       applyDiscount: applyDiscount && canApplyDiscount,
-      confirmNewCustomer: Boolean(customerData?.isNewCustomer),
-      ...(customerData?.isNewCustomer && customerData?.name
-        ? { customerName: customerData.name }
-        : {}),
+      confirmNewCustomer: isNewCustomer,
+      ...(isNewCustomer ? { customerName: trimmedName } : {}),
     };
   };
 
@@ -326,6 +347,14 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
           const creditAmount = parseAmount(customerDataJson.credit);
           setCredit(creditAmount);
           setCustomerData(customerDataJson);
+
+          if (customerDataJson.isNewCustomer) {
+            const existingName =
+              customerDataJson.name && customerDataJson.name !== 'کاربر جدید'
+                ? customerDataJson.name
+                : '';
+            setNewCustomerName(existingName);
+          }
 
           if (creditAmount === 0) {
             setSelectedOption('saveForLater');
@@ -428,17 +457,54 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       >
         {customerData && (
           <View style={styles.customerCard}>
-            {customerData.isNewCustomer && (
+            {(customerData.isNewCustomer || customerData.isFirstBuyEligible) && (
               <View style={styles.newCustomerBanner}>
                 <Text style={styles.newCustomerBannerText}>
-                  مشتری جدید — در صورت وجود طرح، تخفیف اولین خرید روی همین تراکنش اعمال می‌شود.
+                  {customerData.isNewCustomer
+                    ? 'مشتری جدید — در صورت وجود طرح، تخفیف اولین خرید روی همین تراکنش اعمال می‌شود.'
+                    : 'اولین خرید این مشتری — در صورت وجود طرح، تخفیف اولین خرید روی همین تراکنش اعمال می‌شود.'}
                 </Text>
               </View>
             )}
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>نام مشتری</Text>
-              <Text style={styles.customerValue}>{customerData.name || '—'}</Text>
-            </View>
+            {customerData.isNewCustomer ? (
+              <View style={styles.nameField}>
+                <Text style={styles.nameFieldLabel}>
+                  نام مشتری <Text style={styles.requiredMark}>*</Text>
+                </Text>
+                <TextInput
+                  style={[
+                    styles.nameInput,
+                    !!newCustomerNameError && styles.nameInputError,
+                  ]}
+                  value={newCustomerName}
+                  onChangeText={async (text) => {
+                    setNewCustomerName(text);
+                    if (newCustomerNameError) {
+                      setNewCustomerNameError('');
+                    }
+                    const updated = { ...customerData, name: text };
+                    setCustomerData(updated);
+                    try {
+                      await AsyncStorage.setItem('customerData', JSON.stringify(updated));
+                    } catch (error) {
+                      console.error('Error saving customer name:', error);
+                    }
+                  }}
+                  placeholder="نام مشتری را وارد کنید"
+                  placeholderTextColor="#999"
+                  textAlign="right"
+                  autoCorrect={false}
+                />
+                {!!newCustomerNameError && (
+                  <Text style={styles.nameErrorText}>{newCustomerNameError}</Text>
+                )}
+              </View>
+            ) : (
+              <View style={styles.customerRow}>
+                <Text style={styles.customerLabel}>نام مشتری</Text>
+                <Text style={styles.customerValue}>{customerData.name || '—'}</Text>
+              </View>
+            )}
             <View style={styles.customerRow}>
               <Text style={styles.customerLabel}>شماره همراه</Text>
               <Text style={styles.customerValue}>{customerData.userPhoneNumber || phoneNumber || '—'}</Text>
@@ -483,10 +549,41 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
           })()}
         </View>
 
-        {hasDiscounts && (
+        {occasionDiscounts.length > 0 && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>هدیه تولد و سالگرد</Text>
+            {occasionDiscounts.map((discount) => (
+              <View
+                key={`occasion-${discount.id}`}
+                style={[
+                  styles.discountChip,
+                  isBirthdayDiscount(discount)
+                    ? styles.birthdayChip
+                    : styles.anniversaryChip,
+                ]}
+              >
+                <Text style={styles.discountAmountText}>{formatDiscountValue(discount)}</Text>
+                <Text style={styles.discountMetaText}>
+                  {isBirthdayDiscount(discount) ? 'هدیه تولد' : 'هدیه سالگرد ازدواج'}
+                </Text>
+                {!!discount.lineTitle && (
+                  <Text style={styles.discountMetaText}>· {discount.lineTitle}</Text>
+                )}
+                <Text style={styles.discountDateText}>· تا {discount.toDate}</Text>
+              </View>
+            ))}
+            {applyCredit && (
+              <Text style={styles.hintText}>
+                با استفاده از اعتبار، این تخفیف اعمال نمی‌شود.
+              </Text>
+            )}
+          </View>
+        )}
+
+        {otherDiscounts.length > 0 && (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>تخفیف‌های فعال</Text>
-            {discounts.map((discount) => (
+            {otherDiscounts.map((discount) => (
               <View key={discount.id} style={styles.discountChip}>
                 <Text style={styles.discountAmountText}>{formatDiscountValue(discount)}</Text>
                 <Text style={styles.discountMetaText}>{discount.typeLabel}</Text>
@@ -727,6 +824,40 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansWebFaNum',
     textAlign: 'right',
   },
+  nameField: {
+    marginBottom: 12,
+  },
+  nameFieldLabel: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'IRANSansWebFaNum',
+    textAlign: 'right',
+    marginBottom: 6,
+  },
+  requiredMark: {
+    color: '#fd6757',
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    backgroundColor: '#fff',
+    fontFamily: 'IRANSansWebFaNum',
+    color: '#2c2c2c',
+  },
+  nameInputError: {
+    borderColor: '#fd6757',
+  },
+  nameErrorText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#fd6757',
+    fontFamily: 'IRANSansWebFaNum',
+    textAlign: 'right',
+  },
   customerRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
@@ -819,6 +950,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 8,
+  },
+  birthdayChip: {
+    backgroundColor: '#FFF3E8',
+  },
+  anniversaryChip: {
+    backgroundColor: '#F3E8FF',
   },
   discountAmountText: {
     fontSize: 14,

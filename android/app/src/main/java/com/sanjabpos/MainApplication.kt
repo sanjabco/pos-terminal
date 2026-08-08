@@ -25,8 +25,10 @@ class MainApplication : Application(), ReactApplication {
 
       override fun getJSMainModuleName(): String = "index"
 
-      override fun getJSBundleFile(): String? =
-        OTAUpdaterStorage.getBundlePath(applicationContext)
+      override fun getJSBundleFile(): String? {
+        if (BuildConfig.DEBUG) return null
+        return OTAUpdaterStorage.getBundlePath(applicationContext)
+      }
 
       override fun getUseDeveloperSupport(): Boolean =
         BuildConfig.DEBUG &&

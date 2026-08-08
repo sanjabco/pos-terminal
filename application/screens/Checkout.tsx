@@ -1,0 +1,960 @@
+/**
+ * Checkout Screen - phone + benefits + payment in one step
+ */
+
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Switch,
+  Keyboard,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { PosTopBar } from '../components/PosTopBar';
+import { FooterBar, FooterButton } from '../components/FooterBar';
+import { useAuth } from '../hooks/useAuth';
+import { useCustomer, useCashbacks, useLinesDropdown, fetchShareDiscountPreview } from '../hooks/useApi';
+import { useServiceContext } from '../providers/ServiceProvider';
+import { useSnackbarContext } from '../providers/SnackbarProvider';
+import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
+import type { Customer, CustomerActiveDiscount, ShareDiscountPreviewItem } from '../services/api';
+import { colors, fonts } from '../theme/colors';
+import moment from 'moment-jalaali';
+
+interface LinePreview {
+  lineId: number;
+  lineTitle: string;
+  price: number;
+  discountAmount: number;
+  adjustedPrice: number;
+  payFromCredit: number;
+  cashPayment: number;
+}
+
+const parseAmount = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+  if (typeof value === 'string') {
+    return Math.round(parseFloat(value.replace(/,/g, '')) || 0);
+  }
+  return 0;
+};
+
+/** Backend DiscountType: Birthday=4, Anniversary=5 */
+const isBirthdayDiscount = (d: CustomerActiveDiscount) =>
+  Number(d.type) === 4 || d.typeLabel?.includes('تولد');
+
+const isAnniversaryDiscount = (d: CustomerActiveDiscount) =>
+  Number(d.type) === 5 || d.typeLabel?.includes('سالگرد');
+
+const isOccasionDiscount = (d: CustomerActiveDiscount) =>
+  isBirthdayDiscount(d) || isAnniversaryDiscount(d);
+
+const convertPersianToEnglish = (persianNumber: string): string => {
+  const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  let result = persianNumber;
+  persianNumbers.forEach((persian, index) => {
+    result = result.replace(new RegExp(persian, 'g'), englishNumbers[index]);
+  });
+  return result;
+};
+
+function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
+  const { showError } = useSnackbarContext();
+  const { selectedBranch } = useAuth();
+  const { selectedServices, getTotalAmount, getServicesWithPrices } = useServiceContext();
+
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [selectedOption, setSelectedOption] = useState('useCredit');
+  const [applyDiscount, setApplyDiscount] = useState(true);
+  const [customerData, setCustomerData] = useState<Customer | null>(null);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerNameError, setNewCustomerNameError] = useState('');
+  const [credit, setCredit] = useState(0);
+  const [sharePreview, setSharePreview] = useState<ShareDiscountPreviewItem[]>([]);
+  const [sharePreviewLoading, setSharePreviewLoading] = useState(false);
+  const [sharingEnabled, setSharingEnabled] = useState(true);
+
+  const englishPhoneNumber = convertPersianToEnglish(phoneNumber);
+  const isValidPhone = englishPhoneNumber.length === 11 && englishPhoneNumber.startsWith('09');
+  const branchId = Number(selectedBranch?.id) || 0;
+
+  const { data: customerResponse, isLoading: customerLoading, refetch } = useCustomer(
+    isValidPhone ? englishPhoneNumber : '',
+    branchId,
+  );
+  const { data: cashbacksData } = useCashbacks();
+  const { data: linesData } = useLinesDropdown(branchId);
+
+  const discounts = customerData?.discounts || [];
+  const occasionDiscounts = discounts.filter(isOccasionDiscount);
+  const otherDiscounts = discounts.filter((d) => !isOccasionDiscount(d));
+  const hasDiscounts = discounts.length > 0;
+  const applyCredit = selectedOption === 'useCredit' && credit > 0;
+  const canApplyDiscount = hasDiscounts && !applyCredit;
+  const customerReady = Boolean(customerData) && isValidPhone && !customerLoading;
+
+  useEffect(() => {
+    if (isValidPhone) {
+      refetch();
+    }
+  }, [englishPhoneNumber, isValidPhone, refetch]);
+
+  useEffect(() => {
+    const syncCustomer = async () => {
+      if (!isValidPhone) {
+        setCustomerData(null);
+        setCredit(0);
+        setNewCustomerName('');
+        setNewCustomerNameError('');
+        return;
+      }
+
+      if (customerResponse?.Code === 200 && customerResponse?.Data) {
+        const data = customerResponse.Data;
+        const creditAmount = parseAmount(data.credit);
+        setCustomerData(data);
+        setCredit(creditAmount);
+        setSelectedOption(creditAmount > 0 ? 'useCredit' : 'saveForLater');
+        if (data.isNewCustomer) {
+          setNewCustomerName(data.name && data.name !== 'کاربر جدید' ? data.name : '');
+        } else {
+          setNewCustomerName('');
+        }
+        setNewCustomerNameError('');
+        try {
+          await AsyncStorage.setItem('customerData', JSON.stringify(data));
+          await AsyncStorage.setItem('phoneNumber', phoneNumber);
+          await AsyncStorage.setItem('branchId', String(branchId));
+        } catch (error) {
+          console.error('Error saving customer data:', error);
+        }
+        return;
+      }
+
+      if (customerResponse && customerResponse.Code !== 200) {
+        const defaultCustomer: Customer = {
+          name: '',
+          userPhoneNumber: englishPhoneNumber,
+          credit: 0,
+          subscriptionCode: null,
+          discounts: [],
+          isNewCustomer: true,
+        };
+        setCustomerData(defaultCustomer);
+        setCredit(0);
+        setSelectedOption('saveForLater');
+        setNewCustomerName('');
+        setNewCustomerNameError('');
+        try {
+          await AsyncStorage.setItem('customerData', JSON.stringify(defaultCustomer));
+          await AsyncStorage.setItem('phoneNumber', phoneNumber);
+          await AsyncStorage.setItem('branchId', String(branchId));
+        } catch (error) {
+          console.error('Error saving default customer:', error);
+        }
+      }
+    };
+
+    syncCustomer();
+  }, [customerResponse, isValidPhone, englishPhoneNumber, phoneNumber, branchId]);
+
+  const persistCustomerName = async (name: string) => {
+    setNewCustomerName(name);
+    if (newCustomerNameError) {
+      setNewCustomerNameError('');
+    }
+    if (!customerData?.isNewCustomer) {
+      return;
+    }
+    const updated = { ...customerData, name };
+    setCustomerData(updated);
+    try {
+      await AsyncStorage.setItem('customerData', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error saving customer name:', error);
+    }
+  };
+
+  const activeCashbacks = useMemo(() => {
+    if (cashbacksData?.Code !== 200 || !cashbacksData?.Data?.cashBackModel) {
+      return [];
+    }
+    let relevant = cashbacksData.Data.cashBackModel;
+    if (selectedServices.length > 0) {
+      const ids = selectedServices.map((s) => parseInt(s.id, 10));
+      relevant = relevant.filter((cb: any) => ids.includes(cb.lineId));
+    }
+    const now = moment();
+    return relevant.filter((cb: any) => {
+      const fromDate = moment(cb.fromDate, 'jYYYY/jMM/jDD');
+      const toDate = moment(cb.toDate, 'jYYYY/jMM/jDD');
+      return fromDate <= now && toDate >= now;
+    });
+  }, [cashbacksData, selectedServices]);
+
+  const getLineMaxCreditRials = (lineId: number, serviceAmount: number): number => {
+    const lines = linesData?.Data?.lines || [];
+    const line = lines.find((l: any) => l.id === lineId);
+    if (!line) return serviceAmount;
+    const maxPayAmountByCashBack = Number(line.maxPayAmountByCashBack) || 0;
+    return maxPayAmountByCashBack > 0
+      ? Math.min(serviceAmount, maxPayAmountByCashBack)
+      : serviceAmount;
+  };
+
+  const getApplicableDiscount = (lineId: number): CustomerActiveDiscount | null => {
+    if (!discounts.length) return null;
+    const matches = discounts.filter((discount) => {
+      const branchOk = discount.branchId == null || Number(discount.branchId) === branchId;
+      const lineOk = discount.lineId == null || Number(discount.lineId) === Number(lineId);
+      return branchOk && lineOk;
+    });
+    return matches.sort((a, b) => {
+      const aFixed = Number(a.fixedAmount) || 0;
+      const bFixed = Number(b.fixedAmount) || 0;
+      if (aFixed !== bFixed) return bFixed - aFixed;
+      return Number(b.percent) - Number(a.percent);
+    })[0] ?? null;
+  };
+
+  const linePreviews: LinePreview[] = useMemo(() => {
+    const servicesWithPrices = getServicesWithPrices();
+    let remainingCredit = applyCredit ? credit : 0;
+    const shouldApplyDiscount = applyDiscount && !applyCredit;
+
+    return servicesWithPrices.map((service) => {
+      const price = parseAmount(service.amount);
+      const lineId = parseInt(service.id, 10);
+      const applicableDiscount = shouldApplyDiscount ? getApplicableDiscount(lineId) : null;
+      let discountAmount = 0;
+      if (applicableDiscount && price > 0) {
+        const fixed = Number(applicableDiscount.fixedAmount) || 0;
+        discountAmount = fixed > 0
+          ? Math.min(price, Math.round(fixed))
+          : Math.round((price * (Number(applicableDiscount.percent) || 0)) / 100);
+      }
+      const adjustedPrice = Math.max(0, price - discountAmount);
+      const lineMaxUsage = getLineMaxCreditRials(lineId, adjustedPrice);
+      const payFromCredit = remainingCredit > 0 && adjustedPrice > 0
+        ? Math.min(adjustedPrice, remainingCredit, lineMaxUsage)
+        : 0;
+      remainingCredit -= payFromCredit;
+      return {
+        lineId,
+        lineTitle: service.title,
+        price,
+        discountAmount,
+        adjustedPrice,
+        payFromCredit: Math.round(payFromCredit),
+        cashPayment: Math.max(0, adjustedPrice - payFromCredit),
+      };
+    });
+  }, [
+    selectedServices,
+    applyCredit,
+    credit,
+    applyDiscount,
+    discounts,
+    linesData,
+  ]);
+
+  const totalAmount = linePreviews.reduce((sum, p) => sum + p.price, 0) || getTotalAmount();
+  const totalDiscountAmount = linePreviews.reduce((sum, p) => sum + p.discountAmount, 0);
+  const creditUsed = linePreviews.reduce((sum, p) => sum + p.payFromCredit, 0);
+  const finalAmountToPay = linePreviews.reduce((sum, p) => sum + p.cashPayment, 0);
+  const totalAfterDiscount = linePreviews.reduce((sum, p) => sum + p.adjustedPrice, 0);
+
+  useEffect(() => {
+    if (!isValidPhone || !branchId || linePreviews.length === 0) {
+      setSharePreview([]);
+      setSharePreviewLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSharePreviewLoading(true);
+      try {
+        const response = await fetchShareDiscountPreview({
+          phoneNumber: englishPhoneNumber,
+          branchId,
+          amount: totalAfterDiscount,
+          lineIds: linePreviews.map((p) => p.lineId).filter((id) => id > 0),
+        });
+        if (cancelled) return;
+        const payload = response?.Data || (response as any)?.data || {};
+        setSharingEnabled(payload.sharingEnabled !== false);
+        setSharePreview(Array.isArray(payload.items) ? payload.items.slice(0, 3) : []);
+      } catch (error) {
+        console.error('Share discount preview failed:', error);
+        if (!cancelled) setSharePreview([]);
+      } finally {
+        if (!cancelled) setSharePreviewLoading(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isValidPhone, englishPhoneNumber, branchId, totalAfterDiscount, applyCredit, applyDiscount, customerData]);
+
+  const formatDiscountValue = (discount: CustomerActiveDiscount) => {
+    const fixed = Number(discount.fixedAmount) || 0;
+    if (fixed > 0) return `${formatNumberWithSeparator(fixed)} ${CURRENCY_LABEL}`;
+    return `${discount.percent}%`;
+  };
+
+  const prepareTransactionData = () => {
+    if (!isValidPhone) {
+      showError('شماره تلفن معتبر نیست');
+      return null;
+    }
+    if (getServicesWithPrices().length === 0) {
+      showError('لطفاً حداقل یک سرویس با مبلغ انتخاب کنید');
+      return null;
+    }
+
+    const isNewCustomer = Boolean(customerData?.isNewCustomer);
+    const trimmedName = newCustomerName.trim();
+    if (isNewCustomer && !trimmedName) {
+      setNewCustomerNameError('نام مشتری الزامی است');
+      showError('لطفا نام مشتری را وارد کنید');
+      return null;
+    }
+
+    return {
+      cashBackDto: linePreviews.map((preview) => ({
+        lineId: preview.lineId,
+        lineTitle: preview.lineTitle,
+        price: Math.round(preview.price).toString(),
+        payFromCredit: Math.round(preview.payFromCredit),
+        paidByCash: Math.round(preview.cashPayment),
+        description: '',
+        PaymentMethod: 'پوز - پوز آبی',
+      })),
+      cardNumber: englishPhoneNumber,
+      shouldSendMessage: true,
+      branchId,
+      applyCredit,
+      applyDiscount: applyDiscount && canApplyDiscount,
+      confirmNewCustomer: isNewCustomer,
+      ...(isNewCustomer ? { customerName: trimmedName } : {}),
+    };
+  };
+
+  const goToSuccess = (transactionData: any, paymentMethod = 'cash') => {
+    navigation.navigate('Success', {
+      totalAmount,
+      finalAmountToPay,
+      creditUsed,
+      discountAmount: totalDiscountAmount,
+      creditOption: selectedOption,
+      transactionResult: transactionData,
+      paymentMethod,
+      result: '',
+      eventResult: '',
+    });
+  };
+
+  const handleCashPayment = () => {
+    const transactionData = prepareTransactionData();
+    if (!transactionData) return;
+    goToSuccess(transactionData, 'cash');
+  };
+
+  const handleCardPayment = () => {
+    const transactionData = prepareTransactionData();
+    if (!transactionData) return;
+    if (finalAmountToPay > 0) {
+      navigation.navigate('Payment', {
+        totalAmount,
+        finalAmountToPay,
+        creditUsed,
+        discountAmount: totalDiscountAmount,
+        creditOption: selectedOption,
+        transactionResult: transactionData,
+      });
+    } else {
+      goToSuccess(transactionData, 'cash');
+    }
+  };
+
+  const handleSubmit = () => {
+    const transactionData = prepareTransactionData();
+    if (!transactionData) return;
+    goToSuccess(transactionData, 'cash');
+  };
+
+  return (
+    <View style={styles.container}>
+      <PosTopBar title="ثبت خرید" onBack={() => navigation.goBack()} />
+
+      <KeyboardAwareScrollView
+        style={styles.contentArea}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipText}>
+            مبلغ خرید: {formatNumberWithSeparator(totalAmount)} {CURRENCY_LABEL}
+          </Text>
+          <Text style={styles.summaryChipSub}>
+            {activeCashbacks.length > 0
+              ? 'از این خرید بازگشت اعتبار می‌گیرید'
+              : 'از این خرید بازگشت اعتبار نمی‌گیرید'}
+          </Text>
+        </View>
+
+        <Text style={styles.sectionLabel}>شماره همراه مشتری</Text>
+        <TextInput
+          style={[styles.phoneInput, !isValidPhone && phoneNumber.length > 0 && styles.phoneInputError]}
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+          keyboardType="numeric"
+          textAlign="center"
+          maxLength={11}
+          placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+          placeholderTextColor="#999"
+          onSubmitEditing={() => Keyboard.dismiss()}
+        />
+        {!isValidPhone && phoneNumber.length > 0 && (
+          <Text style={styles.errorMessage}>شماره باید ۱۱ رقم و با ۰۹ شروع شود</Text>
+        )}
+
+        {customerLoading && isValidPhone && (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color="#FF6B35" />
+            <Text style={styles.loadingText}>در حال دریافت اطلاعات مشتری...</Text>
+          </View>
+        )}
+
+        {customerReady && customerData && (
+          <>
+            <View style={styles.card}>
+              {(customerData.isNewCustomer || customerData.isFirstBuyEligible) && (
+                <Text style={styles.newCustomerText}>
+                  {customerData.isNewCustomer
+                    ? 'مشتری جدید — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'
+                    : 'اولین خرید این مشتری — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'}
+                </Text>
+              )}
+              {customerData.isNewCustomer ? (
+                <View style={styles.nameField}>
+                  <Text style={styles.nameFieldLabel}>
+                    نام مشتری <Text style={styles.requiredMark}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.nameInput,
+                      !!newCustomerNameError && styles.nameInputError,
+                    ]}
+                    value={newCustomerName}
+                    onChangeText={persistCustomerName}
+                    placeholder="نام مشتری را وارد کنید"
+                    placeholderTextColor="#999"
+                    textAlign="right"
+                    autoCorrect={false}
+                  />
+                  {!!newCustomerNameError && (
+                    <Text style={styles.nameErrorText}>{newCustomerNameError}</Text>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.row}>
+                  <Text style={styles.rowValue}>{customerData.name || '—'}</Text>
+                  <Text style={styles.rowLabel}>نام</Text>
+                </View>
+              )}
+              <View style={styles.row}>
+                <Text style={styles.rowValue}>
+                  {formatNumberWithSeparator(credit)} {CURRENCY_LABEL}
+                </Text>
+                <Text style={styles.rowLabel}>اعتبار (کش‌بک)</Text>
+              </View>
+              {!!customerData.subscriptionCode && (
+                <View style={styles.row}>
+                  <Text style={styles.rowValue}>{customerData.subscriptionCode}</Text>
+                  <Text style={styles.rowLabel}>اشتراک</Text>
+                </View>
+              )}
+            </View>
+
+            {occasionDiscounts.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>هدیه تولد و سالگرد</Text>
+                {occasionDiscounts.map((discount) => (
+                  <View
+                    key={`occasion-${discount.id}`}
+                    style={[
+                      styles.discountChip,
+                      isBirthdayDiscount(discount)
+                        ? styles.birthdayChip
+                        : styles.anniversaryChip,
+                    ]}
+                  >
+                    <Text style={styles.discountStrong}>{formatDiscountValue(discount)}</Text>
+                    <Text style={styles.discountMeta}>
+                      {' '}
+                      {isBirthdayDiscount(discount) ? 'هدیه تولد' : 'هدیه سالگرد ازدواج'}
+                    </Text>
+                    {!!discount.lineTitle && (
+                      <Text style={styles.discountMeta}> · {discount.lineTitle}</Text>
+                    )}
+                    <Text style={styles.discountDate}> · تا {discount.toDate}</Text>
+                  </View>
+                ))}
+                {applyCredit && (
+                  <Text style={styles.hint}>
+                    با استفاده از اعتبار، این تخفیف اعمال نمی‌شود.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {otherDiscounts.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>تخفیف‌های فعال</Text>
+                {otherDiscounts.map((discount) => (
+                  <View key={discount.id} style={styles.discountChip}>
+                    <Text style={styles.discountStrong}>{formatDiscountValue(discount)}</Text>
+                    <Text style={styles.discountMeta}> {discount.typeLabel}</Text>
+                    {!!discount.lineTitle && <Text style={styles.discountMeta}> · {discount.lineTitle}</Text>}
+                    <Text style={styles.discountDate}> · تا {discount.toDate}</Text>
+                  </View>
+                ))}
+                {applyCredit && (
+                  <Text style={styles.hint}>
+                    با استفاده از اعتبار، تخفیف اعمال نمی‌شود.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {credit > 0 && (
+              <View style={styles.card}>
+                <TouchableOpacity
+                  style={[styles.optionRow, selectedOption === 'useCredit' && styles.optionRowActive]}
+                  onPress={() => setSelectedOption('useCredit')}
+                >
+                  <Text style={styles.optionText}>استفاده از اعتبار</Text>
+                  <View style={[styles.radio, selectedOption === 'useCredit' && styles.radioActive]}>
+                    {selectedOption === 'useCredit' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.optionRow, selectedOption === 'saveForLater' && styles.optionRowActive]}
+                  onPress={() => setSelectedOption('saveForLater')}
+                >
+                  <Text style={styles.optionText}>ذخیره برای بعد</Text>
+                  <View style={[styles.radio, selectedOption === 'saveForLater' && styles.radioActive]}>
+                    {selectedOption === 'saveForLater' && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {canApplyDiscount && (
+              <View style={styles.switchRow}>
+                <Switch
+                  value={applyDiscount}
+                  onValueChange={setApplyDiscount}
+                  trackColor={{ false: '#CCCCCC', true: '#81C784' }}
+                  thumbColor={applyDiscount ? '#4CAF50' : '#f4f3f4'}
+                />
+                <Text style={styles.optionText}>اعمال تخفیف</Text>
+              </View>
+            )}
+
+            <View style={styles.card}>
+              <View style={styles.shareHeader}>
+                <Text style={styles.cardTitle}>اشتراک‌گذاری هوشمند</Text>
+                {sharePreviewLoading && <ActivityIndicator size="small" color="#1abc9c" />}
+              </View>
+              {!sharingEnabled ? (
+                <Text style={styles.hint}>اشتراک‌گذاری هوشمند برای این فروشگاه فعال نیست.</Text>
+              ) : sharePreview.length > 0 ? (
+                sharePreview.map((item) => (
+                  <View key={item.businessId} style={styles.shareItem}>
+                    <View style={styles.row}>
+                      <Text style={styles.sharePercent}>
+                        {formatNumberWithSeparator(Number(item.discountPercent) || 0)}٪
+                      </Text>
+                      <Text style={styles.shareTitle}>{item.businessTitle}</Text>
+                    </View>
+                    <Text style={styles.hint}>
+                      مهلت: {formatNumberWithSeparator(Number(item.expirationDays) || 0)} روز
+                      {item.distanceKm != null
+                        ? ` · فاصله: ${formatNumberWithSeparator(Number(item.distanceKm))} کیلومتر`
+                        : ''}
+                    </Text>
+                  </View>
+                ))
+              ) : !sharePreviewLoading ? (
+                <Text style={styles.hint}>فروشگاهی برای پیشنهاد نیست.</Text>
+              ) : null}
+            </View>
+          </>
+        )}
+      </KeyboardAwareScrollView>
+
+      <FooterBar
+        top={
+          <View style={styles.amountBar}>
+            {totalDiscountAmount > 0 && (
+              <View style={styles.amountRow}>
+                <Text style={[styles.amountValue, { color: colors.live }]}>
+                  {formatNumberWithSeparator(totalDiscountAmount)} {CURRENCY_LABEL}
+                </Text>
+                <Text style={styles.amountLabel}>تخفیف</Text>
+              </View>
+            )}
+            {creditUsed > 0 && (
+              <View style={styles.amountRow}>
+                <Text style={styles.amountValue}>
+                  {formatNumberWithSeparator(creditUsed)} {CURRENCY_LABEL}
+                </Text>
+                <Text style={styles.amountLabel}>اعتبار</Text>
+              </View>
+            )}
+            <View style={[styles.amountRow, (totalDiscountAmount > 0 || creditUsed > 0) && styles.amountRowFinal]}>
+              <Text style={styles.amountValueBold}>
+                {formatNumberWithSeparator(finalAmountToPay)} {CURRENCY_LABEL}
+              </Text>
+              <Text style={styles.amountLabelBold}>قابل پرداخت</Text>
+            </View>
+          </View>
+        }
+      >
+        {!customerReady ? (
+          <FooterButton label="شماره مشتری را وارد کنید" disabled />
+        ) : finalAmountToPay === 0 ? (
+          <FooterButton label="ثبت" onPress={handleSubmit} />
+        ) : (
+          <>
+            <FooterButton label="کارت‌خوان" flex={1.35} onPress={handleCardPayment} />
+            <FooterButton label="نقدی" variant="secondary" onPress={handleCashPayment} />
+          </>
+        )}
+      </FooterBar>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  contentArea: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  summaryChip: {
+    backgroundColor: colors.orangeTint,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  summaryChipText: {
+    fontSize: 13.5,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    textAlign: 'right',
+  },
+  summaryChipSub: {
+    marginTop: 4,
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: colors.inkSoft,
+    textAlign: 'right',
+  },
+  sectionLabel: {
+    fontSize: 12.5,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    textAlign: 'right',
+    marginBottom: 8,
+  },
+  phoneInput: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 17,
+    backgroundColor: colors.surface,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+  },
+  phoneInputError: {
+    borderColor: colors.orange,
+    borderWidth: 1.5,
+  },
+  errorMessage: {
+    fontSize: 11,
+    color: colors.danger,
+    textAlign: 'right',
+    marginTop: 6,
+    fontFamily: fonts.regular,
+  },
+  loadingBox: {
+    marginTop: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: colors.inkSoft,
+    fontFamily: fonts.regular,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  cardTitle: {
+    fontSize: 13.5,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    textAlign: 'right',
+    marginBottom: 8,
+  },
+  newCustomerText: {
+    fontSize: 11,
+    color: colors.live,
+    backgroundColor: colors.liveBg,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    fontFamily: fonts.regular,
+    textAlign: 'right',
+  },
+  nameField: {
+    marginBottom: 12,
+  },
+  nameFieldLabel: {
+    fontSize: 12,
+    color: colors.inkSoft,
+    fontFamily: fonts.regular,
+    textAlign: 'right',
+    marginBottom: 6,
+  },
+  requiredMark: {
+    color: colors.danger,
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    backgroundColor: colors.bg,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+  },
+  nameInputError: {
+    borderColor: colors.danger,
+  },
+  nameErrorText: {
+    marginTop: 4,
+    fontSize: 11,
+    color: colors.danger,
+    fontFamily: fonts.regular,
+    textAlign: 'right',
+  },
+  row: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  rowLabel: {
+    fontSize: 12,
+    color: colors.inkSoft,
+    fontFamily: fonts.regular,
+  },
+  rowValue: {
+    fontSize: 13.5,
+    color: colors.ink,
+    fontFamily: fonts.bold,
+  },
+  discountChip: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    backgroundColor: colors.liveBg,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 6,
+  },
+  birthdayChip: {
+    backgroundColor: colors.orangeTint,
+  },
+  anniversaryChip: {
+    backgroundColor: '#F3E8FF',
+  },
+  discountStrong: {
+    fontSize: 12.5,
+    color: colors.live,
+    fontFamily: fonts.bold,
+  },
+  discountMeta: {
+    fontSize: 11.5,
+    color: colors.live,
+    fontFamily: fonts.regular,
+  },
+  discountDate: {
+    fontSize: 11.5,
+    color: colors.inkSoft,
+    fontFamily: fonts.regular,
+  },
+  hint: {
+    fontSize: 11,
+    color: colors.inkSoft,
+    fontFamily: fonts.regular,
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 8,
+    backgroundColor: colors.bg,
+  },
+  optionRowActive: {
+    borderColor: colors.orange,
+    backgroundColor: colors.orangeTint,
+  },
+  optionText: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: colors.ink,
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginLeft: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: colors.orange,
+    backgroundColor: colors.orange,
+  },
+  radioDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'white',
+  },
+  switchRow: {
+    marginTop: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  shareHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  shareItem: {
+    backgroundColor: colors.liveBg,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 6,
+  },
+  shareTitle: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 12.5,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+  },
+  sharePercent: {
+    fontSize: 12.5,
+    fontFamily: fonts.bold,
+    color: colors.live,
+    marginLeft: 8,
+  },
+  amountBar: {
+    backgroundColor: colors.bg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  amountRowFinal: {
+    marginTop: 4,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  amountLabel: {
+    fontSize: 12.5,
+    fontFamily: fonts.medium,
+    color: colors.inkSoft,
+  },
+  amountLabelBold: {
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+  },
+  amountValue: {
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+  },
+  amountValueBold: {
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+  },
+});
+
+export default Checkout;

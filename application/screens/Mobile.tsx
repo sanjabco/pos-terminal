@@ -247,7 +247,7 @@ function Mobile({ navigation }: MobileProps): React.JSX.Element {
           } else {
             // User not found - create default customer data with credit 0
             const defaultCustomerData = {
-              name: 'کاربر جدید',
+              name: '',
               userPhoneNumber: englishPhoneNumber,
               credit: 0,
               subscriptionCode: null,

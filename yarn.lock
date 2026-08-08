@@ -15,6 +15,39 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@appsonair.ir/cli@npm:^1.0.9":
+  version: 1.0.9
+  resolution: "@appsonair.ir/cli@npm:1.0.9"
+  dependencies:
+    axios: ^1.7.9
+    commander: ^12.1.0
+    form-data: ^4.0.1
+    tsx: ^4.19.2
+  bin:
+    appsonair: dist/index.js
+    ota-updater: dist/index.js
+  checksum: 1694f6b5acaf794f612d9968cc65206b595ff1f5f29a94a79dacfc9ea8f46ea23468e3eb3c80a3c706e144146224180994bd1cbffe661b70dd80d65db40bd67b
+  languageName: node
+  linkType: hard
+
+"@appsonair.ir/react-native@npm:^1.0.1":
+  version: 1.0.2
+  resolution: "@appsonair.ir/react-native@npm:1.0.2"
+  dependencies:
+    fflate: ^0.8.2
+  peerDependencies:
+    "@react-native-async-storage/async-storage": ">=1.17.0"
+    react: ">=18.0.0"
+    react-native: ">=0.71.0"
+    react-native-blob-util: ">=0.19.0"
+    react-native-device-info: ">=10.0.0"
+  peerDependenciesMeta:
+    react-native-blob-util:
+      optional: true
+  checksum: 0c4aa3092b6130bd0bf03e003727996116ae6cbe8715d74d30000a0756d48b1932d34b3d7cd5e8444c19bb1961c1f09165c83bd24ab3df358db660e98ab28e41
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.12.13, @babel/code-frame@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/code-frame@npm:7.27.1"
@@ -2259,20 +2292,6 @@ __metadata:
     "@nodelib/fs.scandir": 2.1.5
     fastq: ^1.6.0
   checksum: 190c643f156d8f8f277bf2a6078af1ffde1fd43f498f187c2db24d35b4b4b5785c02c7dc52e356497b9a1b65b13edc996de08de0b961c32844364da02986dc53
-  languageName: node
-  linkType: hard
-
-"@ota-updater/cli@file:../ota-updater/packages/cli::locator=sanjabpos%40workspace%3A.":
-  version: 1.0.0
-  resolution: "@ota-updater/cli@file:../ota-updater/packages/cli#../ota-updater/packages/cli::hash=5fcd09&locator=sanjabpos%40workspace%3A."
-  dependencies:
-    axios: ^1.7.9
-    commander: ^12.1.0
-    form-data: ^4.0.1
-    tsx: ^4.19.2
-  bin:
-    ota-updater: ./dist/index.js
-  checksum: e78fa8fab5baa381b2c03e7ad17b21348a66840a67b0658a0b1bf401fa4549dc251d7a6323435984873332143b3ae5074a489a1a447d83b4b395052e61def753
   languageName: node
   linkType: hard
 
@@ -5363,6 +5382,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fflate@npm:^0.8.2":
+  version: 0.8.3
+  resolution: "fflate@npm:0.8.3"
+  checksum: a2a417e8fb5128b946cb397ab59a90e089057cba492f2c17a89c4af6ba8568b3da72ed36ef1efe901df7858a20964ce56e84d282e60498be1947fcc6133bc891
+  languageName: node
+  linkType: hard
+
 "file-entry-cache@npm:^6.0.1":
   version: 6.0.1
   resolution: "file-entry-cache@npm:6.0.1"
@@ -8090,22 +8116,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ota-updater@file:../ota-updater/packages/react-native::locator=sanjabpos%40workspace%3A.":
-  version: 1.0.0
-  resolution: "ota-updater@file:../ota-updater/packages/react-native#../ota-updater/packages/react-native::hash=d4b8b7&locator=sanjabpos%40workspace%3A."
-  peerDependencies:
-    "@react-native-async-storage/async-storage": ">=1.17.0"
-    react: ">=18.0.0"
-    react-native: ">=0.71.0"
-    react-native-blob-util: ">=0.19.0"
-    react-native-device-info: ">=10.0.0"
-  peerDependenciesMeta:
-    react-native-blob-util:
-      optional: true
-  checksum: 2983f13d8c5895fb6190643f028b9809860f046a9a2707979493e4f9cdc940118f1e10d803f151e58c3ce62bcaf8fb0611970fc684e0545089267e5754194270
-  languageName: node
-  linkType: hard
-
 "own-keys@npm:^1.0.1":
   version: 1.0.1
   resolution: "own-keys@npm:1.0.1"
@@ -8528,16 +8538,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-blob-util@npm:^0.21.2":
-  version: 0.21.3
-  resolution: "react-native-blob-util@npm:0.21.3"
+"react-native-blob-util@npm:^0.22.2":
+  version: 0.22.2
+  resolution: "react-native-blob-util@npm:0.22.2"
   dependencies:
     base-64: 0.1.0
     glob: ^10.3.10
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 068daed013fbb79bc7639806ef7230f3bb812f1c6c3949da573b84355ec40a9f5218951ab4e270f608719fc3bbe967c27e047cb4cdc39f039889277f709c10ad
+  checksum: b07830a301ba89545a58f63d7ee972478ea7748d4d0444cfe9a7f54e229d7cefc6bd0b23af161a03d33aa3daee44cf70c2e2f2d56eb5eb61a4d84e1bd6e0752a
   languageName: node
   linkType: hard
 
@@ -9096,10 +9106,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "sanjabpos@workspace:."
   dependencies:
+    "@appsonair.ir/cli": ^1.0.9
+    "@appsonair.ir/react-native": ^1.0.1
     "@babel/core": ^7.20.0
     "@babel/preset-env": ^7.20.0
     "@babel/runtime": ^7.20.0
-    "@ota-updater/cli": "file:../ota-updater/packages/cli"
     "@react-native-async-storage/async-storage": ^2.2.0
     "@react-native-community/netinfo": ^11.4.1
     "@react-native/babel-preset": 0.74.87
@@ -9117,11 +9128,10 @@ __metadata:
     eslint: ^8.19.0
     jest: ^29.6.3
     moment-jalaali: ^0.10.4
-    ota-updater: "file:../ota-updater/packages/react-native"
     prettier: 2.8.8
     react: 18.2.0
     react-native: 0.74.5
-    react-native-blob-util: ^0.21.2
+    react-native-blob-util: ^0.22.2
     react-native-device-info: ^14.0.1
     react-native-dotenv: ^3.4.11
     react-native-gesture-handler: 2.25.0

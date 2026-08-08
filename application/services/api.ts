@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_BASE_URL = 'https://api.sanjab.app/api';
+export const API_BASE_URL = 'https://apiv2.sanjab.app/api';
 
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const headers: Record<string, string> = {
@@ -359,6 +359,7 @@ export interface Customer {
   name: string;
   discounts?: CustomerActiveDiscount[];
   isNewCustomer?: boolean;
+  isFirstBuyEligible?: boolean;
 }
 
 export interface CashBackDto {

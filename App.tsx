@@ -7,7 +7,7 @@
 
 import './ota';
 import React from 'react';
-import { OTAUpdateProvider } from 'ota-updater';
+import { OTAUpdateProvider } from '@appsonair.ir/react-native';
 import { Fonts } from './application/config/fonts';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -21,6 +21,7 @@ import Success from './application/screens/Success';
 import Credit from './application/screens/Credit';
 import Mobile from './application/screens/Mobile';
 import Price from './application/screens/Price';
+import Checkout from './application/screens/Checkout';
 import Login from './application/screens/Login';
 import BranchSelection from './application/screens/BranchSelection';
 import NativePaymentTest from './application/screens/NativePaymentTest';
@@ -31,7 +32,7 @@ import { QueryProvider } from './application/providers/QueryProvider';
 import { ServiceProvider } from './application/providers/ServiceProvider';
 import { InternetProvider } from './application/providers/InternetProvider';
 import { SnackbarProvider } from './application/providers/SnackbarProvider';
-import { useAuth } from './application/hooks/useAuth';
+import { AuthProvider, useAuth } from './application/hooks/useAuth';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 // Create the stack navigator
@@ -82,6 +83,11 @@ function AppContent(): React.JSX.Element {
           options={{ title: 'Service Selection' }}
         />
         <Stack.Screen
+          name="Checkout"
+          component={Checkout}
+          options={{ title: 'Checkout' }}
+        />
+        <Stack.Screen
           name="Payment"
           component={Payment}
           options={{ title: 'Payment' }}
@@ -124,17 +130,19 @@ function AppContent(): React.JSX.Element {
 function AppProviders({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <QueryProvider>
-      <ServiceProvider>
-        <InternetProvider>
-          <SnackbarProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <AppBootstrap>{children}</AppBootstrap>
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </SnackbarProvider>
-        </InternetProvider>
-      </ServiceProvider>
+      <AuthProvider>
+        <ServiceProvider>
+          <InternetProvider>
+            <SnackbarProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <AppBootstrap>{children}</AppBootstrap>
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </SnackbarProvider>
+          </InternetProvider>
+        </ServiceProvider>
+      </AuthProvider>
     </QueryProvider>
   );
 }
@@ -149,7 +157,7 @@ function App(): React.JSX.Element {
   return (
     <OTAUpdateProvider
       autoSync
-      skipInDev
+      skipInDev={false}
       fontFamily={Fonts.regular}
       messages={{
         title: 'به\u200cروزرسانی برنامه',
@@ -158,6 +166,14 @@ function App(): React.JSX.Element {
         installing: 'در حال نصب به\u200cروزرسانی...',
         restarting: 'در حال راه\u200cاندازی مجدد...',
         error: 'خطا در به\u200cروزرسانی',
+        updateAvailable: 'نسخه جدیدی در دسترس است',
+        changelogTitle: 'تغییرات این نسخه',
+        updateNow: 'به\u200cروزرسانی',
+        skip: 'فعلاً نه',
+        dismiss: 'باشه',
+        appliedNextLaunch:
+          'به\u200cروزرسانی نصب شد و در اجرای بعدی برنامه اعمال می\u200cشود',
+        mandatoryHint: 'این به\u200cروزرسانی الزامی است',
         upToDate: 'برنامه به\u200cروز است',
       }}
     >

@@ -9,7 +9,6 @@ import {
     TextInput,
     Dimensions,
     Platform,
-    ActivityIndicator,
     NativeSyntheticEvent,
     TextInputKeyPressEventData,
 } from 'react-native';
@@ -19,6 +18,8 @@ import { AuthGuard } from '../components/AuthGuard';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { apiClient, API_ENDPOINTS, getApiErrorMessage } from '../services/api';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { colors, fonts } from '../theme/colors';
+import { FooterBar, FooterButton } from '../components/FooterBar';
 
 const { width } = Dimensions.get('window');
 const OTP_LENGTH = 5;
@@ -260,7 +261,7 @@ function LoginContent({
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+            <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -286,27 +287,10 @@ function LoginContent({
                                     textAlign="center"
                                     maxLength={11}
                                     placeholder="مثلاً 09123456789"
-                                    placeholderTextColor="#AAA"
+                                    placeholderTextColor={colors.inkSoft}
                                     editable={!isSendingOtp}
                                 />
                             </View>
-                            <TouchableOpacity
-                                style={[
-                                    styles.continueButton,
-                                    (mobile.length !== 11 || isSendingOtp) && styles.disabledButton,
-                                ]}
-                                onPress={handleSendOtp}
-                                disabled={mobile.length !== 11 || isSendingOtp}
-                            >
-                                {isSendingOtp ? (
-                                    <View style={styles.loadingButtonContent}>
-                                        <ActivityIndicator color="#fff" size="small" />
-                                        <Text style={styles.continueButtonText}>در حال ارسال کد...</Text>
-                                    </View>
-                                ) : (
-                                    <Text style={styles.continueButtonText}>ارسال کد</Text>
-                                )}
-                            </TouchableOpacity>
                         </>
                     ) : (
                         <>
@@ -351,17 +335,23 @@ function LoginContent({
                                     />
                                 ))}
                             </View>
-                            {isVerifyingOtp && (
-                                <View style={[styles.continueButton, styles.disabledButton]}>
-                                    <View style={styles.loadingButtonContent}>
-                                        <ActivityIndicator color="#fff" size="small" />
-                                        <Text style={styles.continueButtonText}>در حال ورود...</Text>
-                                    </View>
-                                </View>
-                            )}
                         </>
                     )}
                 </View>
+                {step === 'mobile' ? (
+                    <FooterBar>
+                        <FooterButton
+                            label={isSendingOtp ? 'در حال ارسال کد...' : 'ارسال کد'}
+                            onPress={handleSendOtp}
+                            disabled={mobile.length !== 11 || isSendingOtp}
+                            loading={isSendingOtp}
+                        />
+                    </FooterBar>
+                ) : isVerifyingOtp ? (
+                    <FooterBar>
+                        <FooterButton label="در حال ورود..." disabled loading />
+                    </FooterBar>
+                ) : null}
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -370,55 +360,46 @@ function LoginContent({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FF6B35',
+        backgroundColor: colors.bg,
     },
     header: {
-        height: 155,
-        backgroundColor: '#FF6B35',
+        backgroundColor: colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.line,
+        paddingTop: 48,
+        paddingBottom: 16,
         justifyContent: 'center',
-        alignItems: 'center',
-        paddingTop: 20,
+        alignItems: 'flex-end',
+        paddingHorizontal: 18,
     },
     headerContent: {
-        flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-end',
     },
     headerTitle: {
-        color: 'white',
-        fontSize: 22,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        textAlign: 'center',
+        color: colors.ink,
+        fontSize: 18,
+        fontFamily: fonts.bold,
+        textAlign: 'right',
     },
     contentCard: {
         flex: 1,
-        backgroundColor: '#EFF2F3',
-        marginTop: -30,
-        borderRadius: 25,
-        paddingTop: 60,
-        paddingHorizontal: 25,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-        justifyContent: 'flex-start',
+        backgroundColor: colors.bg,
+        paddingTop: 40,
+        paddingHorizontal: 22,
     },
     instructionText: {
-        fontSize: 16,
-        color: '#333',
+        fontSize: 14,
+        color: colors.ink,
         textAlign: 'center',
         marginBottom: 12,
-        fontFamily: 'IRANSansWebFaNum-Medium',
-        lineHeight: 28,
+        fontFamily: fonts.medium,
+        lineHeight: 26,
         writingDirection: 'rtl',
     },
     instructionPhoneNumber: {
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        color: '#FF6B35',
+        fontFamily: fonts.bold,
+        color: colors.orangeDeep,
         writingDirection: 'ltr',
     },
     editNumberRow: {
@@ -427,9 +408,9 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     editNumberText: {
-        fontSize: 14,
-        color: '#FF6B35',
-        fontFamily: 'IRANSansWebFaNum-Bold',
+        fontSize: 13,
+        color: colors.orangeDeep,
+        fontFamily: fonts.bold,
         textAlign: 'right',
         writingDirection: 'rtl',
     },
@@ -449,63 +430,32 @@ const styles = StyleSheet.create({
     },
     otpInput: {
         borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 12,
-        fontSize: 22,
-        backgroundColor: 'white',
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        color: '#333',
+        borderColor: colors.line,
+        borderRadius: 14,
+        fontSize: 20,
+        backgroundColor: colors.surface,
+        fontFamily: fonts.bold,
+        color: colors.ink,
         padding: 0,
     },
     otpInputFilled: {
-        borderColor: '#FF6B35',
+        borderColor: colors.orange,
     },
     otpInputDisabled: {
         opacity: 0.6,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 12,
+        borderColor: colors.line,
+        borderRadius: 14,
         paddingHorizontal: 20,
         paddingVertical: 15,
-        fontSize: 18,
-        backgroundColor: 'white',
+        fontSize: 17,
+        backgroundColor: colors.surface,
         textAlign: 'center',
-        fontFamily: 'IRANSansWebFaNum',
-    },
-    continueButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 18,
-        borderRadius: 0,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-    },
-    continueButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        textAlign: 'center',
-    },
-    disabledButton: {
-        opacity: 0.6,
-    },
-    loadingButtonContent: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 10,
+        fontFamily: fonts.regular,
+        color: colors.ink,
     },
 });
 
-export default Login; 
+export default Login;

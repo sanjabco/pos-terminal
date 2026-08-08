@@ -7,16 +7,12 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-    SafeAreaView,
-    StatusBar,
     StyleSheet,
     Text,
     View,
     TouchableOpacity,
-    Dimensions,
-    Image,
     ScrollView,
-    Pressable,
+    TextInput,
     ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,9 +21,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useServiceContext } from '../providers/ServiceProvider';
 import { AuthGuard } from '../components/AuthGuard';
 import { LogoutModal } from '../components/LogoutModal';
+import { PosTopBar } from '../components/PosTopBar';
+import { FooterBar, FooterButton } from '../components/FooterBar';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
-
-const { width, height } = Dimensions.get('window');
+import { CURRENCY_LABEL, formatAmountInput, formatNumberWithSeparator } from '../utils/currency';
+import { colors, fonts } from '../theme/colors';
 
 interface ServiceOption {
     id: string;
@@ -82,18 +80,24 @@ function ServiceContent({
     refetch
 }: any): React.JSX.Element {
     const { showError } = useSnackbarContext();
-    const { clearServices } = useServiceContext();
+    const { clearServices, updateServiceAmount, validateAllAmounts, getTotalAmount } = useServiceContext();
 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-    console.log(servicesData);
     const toggleService = (service: any) => {
-        if (isServiceSelected(service.id)) {
-            removeService(service.id);
+        const serviceId = String(service.id);
+        if (isServiceSelected(serviceId)) {
+            removeService(serviceId);
         } else {
-            addService({ id: service.id, title: service.title });
+            addService({ id: serviceId, title: service.title });
         }
     };
+
+    const handleAmountChange = (serviceId: string, text: string) => {
+        updateServiceAmount(serviceId, formatAmountInput(text));
+    };
+
+    const canContinue = selectedServices.length > 0 && validateAllAmounts();
 
     const handleLogoutPress = () => {
         setShowLogoutModal(true);
@@ -103,16 +107,13 @@ function ServiceContent({
         try {
             setShowLogoutModal(false);
 
-            // Clear all saved data from AsyncStorage
+            // Clear customer session data and selected services
             await AsyncStorage.multiRemove(['customerData', 'phoneNumber', 'branchId']);
-
-            // Clear selected services
             clearServices();
 
-            // Perform logout (clears auth data)
+            // Clears auth storage, selected branch, and React Query cache
             await logout();
 
-            // Explicitly navigate to Login screen after logout
             navigation.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
@@ -130,49 +131,35 @@ function ServiceContent({
     // Handle loading state
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
-                <View style={styles.header}>
-                    <View style={styles.headerContent}>
-                        <Image style={{ height: 70 }} resizeMode='contain' source={require('../assets/images/logo.png')} />
-                    </View>
+            <View style={styles.container}>
+                <PosTopBar title={selectedBranch?.title || 'خدمات'} />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.orange} />
+                    <Text style={styles.loadingText}>در حال بارگذاری خدمات...</Text>
                 </View>
-                <View style={styles.contentCard}>
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#FF6B35" />
-                        <Text style={styles.loadingText}>در حال بارگذاری خدمات...</Text>
-                    </View>
-                </View>
-            </SafeAreaView>
+            </View>
         );
     }
 
     // Handle error state
     if (error) {
         return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
-                {/* Header Section */}
-                <View style={styles.header}>
-                    <View style={styles.headerContent}>
-                        <Image style={{ height: 70 }} resizeMode='contain' source={require('../assets/images/logo.png')} />
-                        <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutPress}>
-                            <Text style={styles.logoutButtonText}>خروج</Text>
+            <View style={styles.container}>
+                <PosTopBar
+                    title="خدمات"
+                    right={
+                        <TouchableOpacity style={styles.headerAction} onPress={handleLogoutPress}>
+                            <Text style={styles.headerActionText}>خروج</Text>
                         </TouchableOpacity>
-                    </View>
-                    {/* <View style={styles.branchInfo}>
-                    <Text style={styles.branchTitle}>{selectedBranch.title}</Text>
-                </View> */}
+                    }
+                />
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>خطا در بارگذاری خدمات</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                        <Text style={styles.retryButtonText}>تلاش مجدد</Text>
+                    </TouchableOpacity>
                 </View>
-                <View style={styles.contentCard}>
-                    <View style={styles.errorContainer}>
-                        <Text style={styles.errorText}>خطا در بارگذاری خدمات</Text>
-                        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                            <Text style={styles.retryButtonText}>تلاش مجدد</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </SafeAreaView>
+            </View>
         );
     }
 
@@ -183,301 +170,274 @@ function ServiceContent({
     // Get services from API response (lines from the selected branch)
     const services = (servicesData?.Data as any)?.lines || [];
 
-    console.log(Dimensions.get('window').width);
-
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+        <View style={styles.container}>
+            <PosTopBar
+                title={selectedBranch?.title || 'خدمات'}
+                right={
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity style={styles.headerAction} onPress={handleBranchChangePress}>
+                            <Text style={styles.headerActionText}>شعبه</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.headerAction} onPress={handleLogoutPress}>
+                            <Text style={[styles.headerActionText, { color: colors.danger }]}>خروج</Text>
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
 
-            {/* Header Section */}
-            <View style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity style={styles.changeBranchButton} onPress={handleBranchChangePress}>
-                        <Text style={styles.logoutButtonText}>شعبه</Text>
-                    </TouchableOpacity>
-                    <Image style={{ height: 70 }} resizeMode='contain' source={require('../assets/images/logo.png')} />
-                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutPress}>
-                        <Text style={styles.logoutButtonText}>خروج</Text>
-                    </TouchableOpacity>
-                </View>
-                {/* <View style={styles.branchInfo}>
-                    <Text style={styles.branchTitle}>{selectedBranch.title}</Text>
-                </View> */}
-            </View>
-
-            {/* Main Content Card */}
-            <View style={styles.contentCard}>
-                <Text style={styles.instructionText}>ابتدا بخش مورد نظر را انتخاب کنید</Text>
-                {/* <TouchableOpacity onPress={() => { navigation.navigate('NativePaymentTest') }}><Text>Test</Text></TouchableOpacity> */}
-                <View style={styles.serviceOptionsContainer}>
-                    <ScrollView contentContainerStyle={{ paddingBottom: 150 }} >
-                        {services.map((service: any) => {
-                            const isSelected = isServiceSelected(service.id);
-                            return (
-                                <TouchableOpacity
-                                    key={service.id}
-                                    style={[
-                                        styles.serviceOption,
-                                        isSelected ? styles.serviceOptionSelected : styles.serviceOptionUnselected
-                                    ]}
-                                    onPress={() => toggleService(service)}
-                                >
-                                    <Text style={styles.serviceOptionText}>{service.title}</Text>
-                                    {isSelected && (
-                                        <View style={styles.checkmark}>
-                                            <Text style={styles.checkmarkText}>✓</Text>
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
-                </View>
-            </View>
-
-            {/* Continue Button */}
-            <TouchableOpacity
-                onPress={() => {
-                    if (selectedServices.length === 0) {
-                        showError('لطفاً حداقل یک سرویس را انتخاب کنید');
-                        return;
-                    }
-                    navigation.navigate('Price');
-                }}
-                style={[
-                    styles.continueButton,
-                    selectedServices.length === 0 && styles.continueButtonDisabled
-                ]}
-                disabled={selectedServices.length === 0}
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={[styles.scrollContent, { paddingBottom: 28 }]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
             >
-                <Text style={[
-                    styles.continueButtonText,
-                    selectedServices.length === 0 && styles.continueButtonTextDisabled
-                ]}>ادامه</Text>
-            </TouchableOpacity>
+                <Text style={styles.instructionText}>بخش و مبلغ را انتخاب کنید</Text>
 
-            {/* Logout Modal */}
+                {services.map((service: any) => {
+                    const serviceId = String(service.id);
+                    const isSelected = isServiceSelected(serviceId);
+                    const selected = selectedServices.find((s: any) => String(s.id) === serviceId);
+                    return (
+                        <View
+                            key={serviceId}
+                            style={[
+                                styles.serviceOption,
+                                isSelected ? styles.serviceOptionSelected : styles.serviceOptionUnselected,
+                            ]}
+                        >
+                            <TouchableOpacity
+                                style={styles.serviceOptionHeader}
+                                onPress={() => toggleService(service)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.serviceOptionText}>{service.title}</Text>
+                                <View style={[styles.checkCircle, isSelected && styles.checkCircleOn]}>
+                                    {isSelected ? <Text style={styles.checkmarkText}>✓</Text> : null}
+                                </View>
+                            </TouchableOpacity>
+                            {isSelected && (
+                                <View style={styles.amountRow}>
+                                    <View style={styles.currencyTag}>
+                                        <Text style={styles.currencyTagText}>{CURRENCY_LABEL}</Text>
+                                    </View>
+                                    <TextInput
+                                        style={styles.amountInput}
+                                        value={selected?.amount || ''}
+                                        onChangeText={(text) => handleAmountChange(serviceId, text)}
+                                        placeholder="مبلغ را وارد کنید"
+                                        placeholderTextColor={colors.inkSoft}
+                                        keyboardType="numeric"
+                                    />
+                                </View>
+                            )}
+                        </View>
+                    );
+                })}
+            </ScrollView>
+
+            <FooterBar
+                top={
+                    selectedServices.length > 0 ? (
+                        <View style={styles.totalBar}>
+                            <Text style={styles.totalBarLabel}>جمع</Text>
+                            <Text style={styles.totalBarValue}>
+                                {formatNumberWithSeparator(getTotalAmount())} {CURRENCY_LABEL}
+                            </Text>
+                        </View>
+                    ) : undefined
+                }
+            >
+                <FooterButton
+                    label="ادامه"
+                    disabled={!canContinue}
+                    onPress={() => {
+                        if (selectedServices.length === 0) {
+                            showError('لطفاً حداقل یک سرویس را انتخاب کنید');
+                            return;
+                        }
+                        if (!validateAllAmounts()) {
+                            showError('لطفاً مبلغ همه بخش‌های انتخاب‌شده را وارد کنید');
+                            return;
+                        }
+                        navigation.navigate('Checkout');
+                    }}
+                />
+            </FooterBar>
+
             <LogoutModal
                 visible={showLogoutModal}
                 onClose={handleLogoutCancel}
                 onConfirm={handleLogoutConfirm}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FF6B35',
+        backgroundColor: colors.bg,
     },
-    header: {
-        height: 170,
-        backgroundColor: '#FF6B35',
-
-    },
-    headerContent: {
+    scroll: {
         flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        marginTop: -30,
     },
-    logoContainer: {
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    brandText: {
-        color: 'white',
-        fontSize: 28,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        marginBottom: 5,
-    },
-    brandTextArabic: {
-        color: 'white',
-        fontSize: 24,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-    },
-    logo: {
-        width: 40,
-        height: 40,
-        backgroundColor: 'white',
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    logoText: {
-        color: '#FF6B35',
-        fontSize: 20,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-    },
-    contentCard: {
-        flex: 1,
-        backgroundColor: '#EFF2F3',
-        marginTop: -30,
-        borderTopLeftRadius: 25,
-        borderTopRightRadius: 25,
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        paddingTop: 30,
-        paddingHorizontal: 25,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
+    scrollContent: {
+        paddingHorizontal: 18,
+        paddingTop: 18,
     },
     instructionText: {
-        fontSize: 16,
-        color: '#333',
-        textAlign: 'center',
-        marginBottom: 30,
-        fontFamily: 'IRANSansWebFaNum-Medium',
-    },
-    serviceOptionsContainer: {
-        // flex: 1, // Remove or comment out this line to avoid layout issues
+        fontSize: 13.5,
+        color: colors.ink,
+        textAlign: 'right',
+        marginBottom: 14,
+        fontFamily: fonts.bold,
     },
     serviceOption: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 18,
-        paddingHorizontal: 20,
-        marginBottom: 12,
-        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        marginBottom: 10,
+        borderRadius: 18,
         borderWidth: 1,
-        position: 'relative',
+        backgroundColor: colors.surface,
+    },
+    serviceOptionHeader: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     serviceOptionUnselected: {
-        backgroundColor: 'white',
-        borderColor: '#E0E0E0',
+        borderColor: colors.line,
     },
     serviceOptionSelected: {
-        backgroundColor: '#FFF3E0',
-        borderColor: '#FF6B35',
+        backgroundColor: colors.orangeTint,
+        borderColor: colors.orange,
     },
     serviceOptionText: {
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        fontSize: 16,
-        color: '#333',
-        textAlign: 'center',
+        fontFamily: fonts.bold,
+        fontSize: 14,
+        color: colors.ink,
+        textAlign: 'right',
+        flex: 1,
     },
-    checkmark: {
+    checkCircle: {
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#FF6B35',
-        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: colors.line,
+        backgroundColor: colors.bg,
         alignItems: 'center',
-        position: 'absolute',
-        right: 20,
+        justifyContent: 'center',
+        marginLeft: 10,
+    },
+    checkCircleOn: {
+        backgroundColor: colors.orange,
+        borderColor: colors.orange,
     },
     checkmarkText: {
         color: 'white',
-        fontSize: 14,
-        fontFamily: 'IRANSansWebFaNum-Bold',
+        fontSize: 12,
+        fontFamily: fonts.bold,
     },
-    continueButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 18,
-        borderRadius: 0,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
+    amountRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: colors.line,
+        marginTop: 12,
     },
-    continueButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        textAlign: 'center',
+    currencyTag: {
+        backgroundColor: colors.orangeTint,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 14,
+        marginRight: 10,
     },
-    continueButtonDisabled: {
-        backgroundColor: '#CCCCCC',
+    currencyTagText: {
+        color: colors.orangeDeep,
+        fontSize: 11,
+        fontFamily: fonts.bold,
     },
-    continueButtonTextDisabled: {
-        color: '#999999',
+    amountInput: {
+        flex: 1,
+        fontSize: 15,
+        fontFamily: fonts.bold,
+        color: colors.ink,
+        textAlign: 'left',
+        paddingVertical: 4,
     },
-    // Loading and error states
+    totalBar: {
+        backgroundColor: colors.bg,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.line,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    totalBarLabel: {
+        fontSize: 12.5,
+        fontFamily: fonts.medium,
+        color: colors.inkSoft,
+    },
+    totalBarValue: {
+        fontSize: 16,
+        fontFamily: fonts.bold,
+        color: colors.ink,
+    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     loadingText: {
-        marginTop: 20,
-        fontSize: 16,
-        color: '#666',
-        fontFamily: 'IRANSansWebFaNum-Medium',
+        marginTop: 16,
+        fontSize: 13,
+        color: colors.inkSoft,
+        fontFamily: fonts.medium,
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 24,
     },
     errorText: {
-        fontSize: 16,
-        color: '#666',
-        fontFamily: 'IRANSansWebFaNum-Medium',
-        marginBottom: 20,
+        fontSize: 14,
+        color: colors.inkSoft,
+        fontFamily: fonts.medium,
+        marginBottom: 16,
     },
     retryButton: {
-        backgroundColor: '#FF6B35',
-        paddingHorizontal: 30,
+        backgroundColor: colors.orange,
+        paddingHorizontal: 24,
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 14,
     },
     retryButtonText: {
         color: 'white',
-        fontSize: 14,
-        fontFamily: 'IRANSansWebFaNum-Bold',
+        fontSize: 13,
+        fontFamily: fonts.bold,
     },
-    logoutButton: {
-        position: 'absolute',
-        right: 20,
-        top: 40,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 8,
+    headerActions: {
+        flexDirection: 'row-reverse',
+        gap: 8,
     },
-    changeBranchButton: {
-        position: 'absolute',
-        left: 20,
-        top: 40,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 8,
+    headerAction: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
-    logoutButtonText: {
-        color: 'white',
-        fontSize: 14,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-    },
-    branchInfo: {
-        alignItems: 'center',
-        paddingBottom: 10,
-    },
-    branchTitle: {
-        color: 'white',
-        fontSize: 18,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        textAlign: 'center',
+    headerActionText: {
+        color: colors.orangeDeep,
+        fontSize: 12,
+        fontFamily: fonts.bold,
     },
 });
 

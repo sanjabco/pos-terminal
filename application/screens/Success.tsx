@@ -7,26 +7,21 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
-  TouchableOpacity,
-  Dimensions,
   BackHandler,
   ActivityIndicator,
 } from 'react-native';
-import ArrowRight from '../components/ArrowRight';
+import { PosTopBar } from '../components/PosTopBar';
+import { FooterBar, FooterButton } from '../components/FooterBar';
 import SuccessIcon from '../components/SuccessIcon';
 import { useServiceContext } from '../providers/ServiceProvider';
-import { ScrollView } from 'react-native-gesture-handler';
 import { useCreateTransaction } from '../hooks/useApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
-
-const { width, height } = Dimensions.get('window');
+import { colors, fonts } from '../theme/colors';
 
 function Success({ navigation, route }: { navigation: any; route: any }): React.JSX.Element {
   // Get service context to clear services after transaction
@@ -56,8 +51,19 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
     ) ||
     0;
   const payBackAmount = resultData?.payBackAmount || 0;
-  const result = transactionData?.result || '';
-  const eventResult = transactionData?.eventResult || '';
+
+  const goHome = async () => {
+    try {
+      await AsyncStorage.multiRemove(['customerData', 'phoneNumber']);
+    } catch (error) {
+      console.error('Error clearing customer data:', error);
+    }
+    clearServices();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Service' }],
+    });
+  };
 
   // Clear services and customer data when component mounts (after successful transaction)
   useEffect(() => {
@@ -103,21 +109,8 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
   // Handle hardware back button
   useEffect(() => {
     const backAction = () => {
-      // Clear customer data when back button is pressed (keep branchId as it's for POS owner)
-      AsyncStorage.multiRemove(['customerData', 'phoneNumber'])
-        .then(() => {
-          console.log('Customer data cleared on back button press');
-        })
-        .catch((error) => {
-          console.error('Error clearing customer data on back button:', error);
-        });
-
-      clearServices();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Service' }],
-      });
-      return true; // Prevent default back behavior
+      goHome();
+      return true;
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
@@ -125,65 +118,30 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
     return () => backHandler.remove();
   }, [navigation, clearServices]);
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B00" />
-
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>نتیجه تراکنش</Text>
-          <TouchableOpacity onPress={async () => {
-            try {
-              // Clear customer data when navigating back (keep branchId as it's for POS owner)
-              await AsyncStorage.multiRemove(['customerData', 'phoneNumber']);
-              console.log('Customer data cleared on header back button');
-            } catch (error) {
-              console.error('Error clearing customer data on header back button:', error);
-            }
-
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Service' }],
-            });
-          }} style={styles.backButton}>
-            <ArrowRight height={34} />
-          </TouchableOpacity>
-
-
-        </View>
-      </View>
+    <View style={styles.container}>
+      <PosTopBar title="نتیجه تراکنش" onBack={goHome} />
       {isSubmitting ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B00" />
+          <ActivityIndicator size="large" color={colors.orange} />
           <Text style={styles.loadingText}>در حال ثبت تراکنش...</Text>
         </View>
       ) : transactionFailed ? (
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: '#E74C3C' }]}>ثبت تراکنش ناموفق بود</Text>
+          <Text style={[styles.loadingText, { color: colors.danger }]}>ثبت تراکنش ناموفق بود</Text>
           <Text style={styles.loadingText}>در صورت کسر مبلغ از کارت، با پشتیبانی تماس بگیرید.</Text>
         </View>
       ) : (
-        <ScrollView>
-          {/* Main Content Card */}
+        <View style={styles.contentArea}>
           <View style={styles.contentCard}>
-            {/* White Box Container */}
-
             <View style={styles.whiteBox}>
-              {/* Success Icon */}
               <View style={styles.iconContainer}>
                 <View style={styles.moneyIcon}>
                   <SuccessIcon height={90} />
                 </View>
               </View>
 
-              {/* Success Message */}
               <Text style={styles.successMessage}>پرداخت موفق</Text>
-              {/* 
-            <Text>{result}</Text>
-            <Text>{eventResult}</Text> */}
 
-
-              {/* Cashback Section */}
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>کش بک جدید</Text>
                 <View style={styles.amountContainer}>
@@ -192,7 +150,6 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
                 </View>
               </View>
 
-              {/* Total Amount Section */}
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>مبلغ کل</Text>
                 <View style={styles.amountContainer}>
@@ -201,7 +158,6 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
                 </View>
               </View>
 
-              {/* Final Amount Section */}
               <View style={styles.infoSection}>
                 <Text style={styles.infoLabel}>مبلغ قابل پرداخت</Text>
                 <View style={styles.amountContainer}>
@@ -220,7 +176,6 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
                 </View>
               )}
 
-              {/* Credit Used Section */}
               {creditUsed > 0 && (
                 <View style={styles.infoSection}>
                   <Text style={styles.infoLabel}>اعتبار استفاده شده</Text>
@@ -230,110 +185,45 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
                   </View>
                 </View>
               )}
-
             </View>
-
           </View>
-        </ScrollView>
+        </View>
       )}
-      {/* Footer Buttons */}
-      <View style={styles.footerButtons}>
-        <TouchableOpacity
-          onPress={async () => {
-            try {
-              // Clear customer data when starting new purchase (keep branchId as it's for POS owner)
-              await AsyncStorage.multiRemove(['customerData', 'phoneNumber']);
-              console.log('Customer data cleared for new purchase');
-            } catch (error) {
-              console.error('Error clearing customer data for new purchase:', error);
-            }
-
-            // Clear services and navigate to Service screen
-            clearServices();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Service' }],
-            });
-          }}
-          style={styles.leftButton}
-        >
-          <Text style={styles.buttonText}>ثبت خرید جدید</Text>
-        </TouchableOpacity>
-        {/* <TouchableOpacity onPress={() => navigation.reset({
-          index: 0,
-          routes: [{ name: 'Report' }],
-        })} style={styles.rightButton}>
-          <Text style={styles.buttonText}>گزارش فروش</Text>
-        </TouchableOpacity> */}
-      </View>
-    </SafeAreaView>
+      <FooterBar>
+        <FooterButton label="ثبت خرید جدید" onPress={goHome} />
+      </FooterBar>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FF6B00',
+    backgroundColor: colors.bg,
   },
-  header: {
-    height: 80,
-    backgroundColor: '#FF6B00',
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  headerContent: {
+  contentArea: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-
-
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontFamily: 'IRANSansWebFaNum-Bold',
-    textAlign: 'center',
-
-
-  },
-  backButton: {
-
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backArrow: {
-    color: 'white',
-    fontSize: 20,
-    fontFamily: 'IRANSansWebFaNum-Bold',
+    backgroundColor: colors.bg,
   },
   contentCard: {
     flex: 1,
-    backgroundColor: '#EFF2F3',
-    marginTop: -10,
-    marginHorizontal: 0,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    paddingTop: 40,
-    paddingHorizontal: 25,
+    backgroundColor: colors.bg,
+    paddingTop: 18,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
   },
   whiteBox: {
-    backgroundColor: 'white',
+    flex: 1,
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 8,
+    padding: 24,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    position: 'relative',
+    marginBottom: 16,
   },
   moneyIcon: {
     width: 80,
@@ -341,62 +231,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  moneyIconText: {
-    fontSize: 60,
-    fontFamily: 'IRANSansWebFaNum',
-  },
-  successCheckmark: {
-    position: 'absolute',
-    bottom: 0,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#00B894',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'white',
-  },
-  checkmarkText: {
-    color: 'white',
-    fontSize: 16,
-    fontFamily: 'IRANSansWebFaNum-Bold',
-  },
   successMessage: {
-    color: '#00B894',
-    fontSize: 22,
-    fontFamily: 'IRANSansWebFaNum-Bold',
+    color: colors.live,
+    fontSize: 20,
+    fontFamily: fonts.bold,
     textAlign: 'center',
     marginBottom: 20,
   },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 4,
-  },
-  paginationDotActive: {
-    backgroundColor: '#00B894',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
   infoSection: {
-    marginBottom: 15,
+    marginBottom: 14,
   },
   infoLabel: {
-    color: '#000',
-    fontSize: 20,
-    fontFamily: 'IRANSansWebFaNum-Medium',
-    marginBottom: 8,
+    color: colors.inkSoft,
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    marginBottom: 6,
     textAlign: 'center',
   },
   amountContainer: {
@@ -405,51 +254,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   amountText: {
-    color: '#000',
-    fontSize: 28,
-    fontFamily: 'IRANSansWebFaNum-Bold',
+    color: colors.ink,
+    fontSize: 24,
+    fontFamily: fonts.bold,
     marginRight: 8,
   },
   currencyText: {
-    color: '#000',
-    fontSize: 16,
-    fontFamily: 'IRANSansWebFaNum',
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    height: 60,
-    backgroundColor: 'transparent',
-  },
-  leftButton: {
-    flex: 1,
-    backgroundColor: '#FF6B00',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderBottomLeftRadius: 25,
-  },
-  rightButton: {
-    flex: 1,
-    backgroundColor: '#00B894',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderBottomRightRadius: 25,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontFamily: 'IRANSansWebFaNum-Bold',
+    color: colors.inkSoft,
+    fontSize: 14,
+    fontFamily: fonts.regular,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFF2F3',
+    backgroundColor: colors.bg,
+    paddingHorizontal: 24,
   },
   loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#666',
-    fontFamily: 'IRANSansWebFaNum-Medium',
+    marginTop: 16,
+    fontSize: 13,
+    color: colors.inkSoft,
+    fontFamily: fonts.medium,
     textAlign: 'center',
   },
 });

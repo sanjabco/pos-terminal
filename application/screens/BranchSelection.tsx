@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
     SafeAreaView,
     StatusBar,
@@ -14,6 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { AuthGuard } from '../components/AuthGuard';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { useServiceContext } from '../providers/ServiceProvider';
+import { colors, fonts } from '../theme/colors';
 
 interface BranchSelectionProps {
     navigation: any;
@@ -23,6 +24,11 @@ interface BranchSelectionProps {
 function BranchSelection({ navigation, route }: BranchSelectionProps): React.JSX.Element {
     const { data: branchesData, isLoading, error, refetch } = useBranches();
     const { setSelectedBranch } = useAuth();
+
+    // Always refetch branches for the current account
+    useEffect(() => {
+        refetch();
+    }, [refetch]);
 
     return (
         <AuthGuard navigation={navigation} route={route} requireAuth={true} requireBranch={false}>
@@ -68,7 +74,7 @@ function BranchSelectionContent({
     if (isLoading) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+                <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>انتخاب شعبه</Text>
@@ -88,7 +94,7 @@ function BranchSelectionContent({
     if (error) {
         return (
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+                <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>انتخاب شعبه</Text>
@@ -110,7 +116,7 @@ function BranchSelectionContent({
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+            <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
             <View style={styles.header}>
                 <View style={styles.headerContent}>
                     <Text style={styles.headerTitle}>انتخاب شعبه</Text>
@@ -144,76 +150,62 @@ function BranchSelectionContent({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FF6B35',
+        backgroundColor: colors.bg,
     },
     header: {
-        height: 155,
-        backgroundColor: '#FF6B35',
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.line,
         paddingTop: 20,
+        paddingBottom: 14,
+        paddingHorizontal: 18,
     },
     headerContent: {
-        flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-end',
     },
     headerTitle: {
-        color: 'white',
-        fontSize: 22,
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        textAlign: 'center',
+        color: colors.ink,
+        fontSize: 15,
+        fontFamily: fonts.bold,
+        textAlign: 'right',
     },
     contentCard: {
         flex: 1,
-        backgroundColor: '#EFF2F3',
-        marginTop: -30,
-        borderRadius: 25,
-        paddingTop: 40,
-        paddingHorizontal: 25,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
+        backgroundColor: colors.bg,
+        paddingTop: 18,
+        paddingHorizontal: 18,
     },
     instructionText: {
-        fontSize: 16,
-        color: '#333',
-        textAlign: 'center',
-        marginBottom: 30,
-        fontFamily: 'IRANSansWebFaNum-Medium',
+        fontSize: 12.5,
+        color: colors.inkSoft,
+        textAlign: 'right',
+        marginBottom: 14,
+        fontFamily: fonts.medium,
     },
     listContainer: {
         paddingBottom: 20,
     },
     branchItem: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 20,
-        marginBottom: 15,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        backgroundColor: colors.surface,
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: colors.line,
     },
     branchTitle: {
-        fontSize: 18,
-        color: '#333',
-        fontFamily: 'IRANSansWebFaNum-Bold',
-        marginBottom: 5,
+        fontSize: 14,
+        color: colors.ink,
+        fontFamily: fonts.bold,
+        marginBottom: 4,
+        textAlign: 'right',
     },
     branchSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        fontFamily: 'IRANSansWebFaNum',
+        fontSize: 11,
+        color: colors.inkSoft,
+        fontFamily: fonts.regular,
+        textAlign: 'right',
     },
     loadingContainer: {
         flex: 1,
@@ -221,10 +213,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        marginTop: 15,
-        fontSize: 16,
-        color: '#666',
-        fontFamily: 'IRANSansWebFaNum',
+        marginTop: 14,
+        fontSize: 13,
+        color: colors.inkSoft,
+        fontFamily: fonts.regular,
     },
     errorContainer: {
         flex: 1,
@@ -232,22 +224,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     errorText: {
-        fontSize: 16,
-        color: '#666',
-        fontFamily: 'IRANSansWebFaNum',
-        marginBottom: 20,
+        fontSize: 13,
+        color: colors.inkSoft,
+        fontFamily: fonts.regular,
+        marginBottom: 16,
     },
     retryButton: {
-        backgroundColor: '#FF6B35',
-        paddingHorizontal: 30,
+        backgroundColor: colors.orange,
+        paddingHorizontal: 24,
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 14,
     },
     retryButtonText: {
         color: 'white',
-        fontSize: 16,
-        fontFamily: 'IRANSansWebFaNum-Bold',
+        fontSize: 13,
+        fontFamily: fonts.bold,
     },
 });
 
-export default BranchSelection; 
+export default BranchSelection;

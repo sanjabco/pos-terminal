@@ -139,6 +139,16 @@ export class TokenManager {
         }
     }
 
+    // Clear selected branch only (used when switching accounts)
+    static async clearSelectedBranch(): Promise<void> {
+        try {
+            await AsyncStorage.removeItem(SELECTED_BRANCH_KEY);
+        } catch (error) {
+            console.error('Error clearing selected branch:', error);
+            throw error;
+        }
+    }
+
     // Clear all authentication data
     static async clearAuthData(): Promise<void> {
         try {
