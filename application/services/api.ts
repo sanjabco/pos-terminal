@@ -379,6 +379,7 @@ export interface TransactionRequest {
   branchId: number;
   applyCredit?: boolean;
   applyDiscount?: boolean;
+  discountId?: number;
   confirmNewCustomer?: boolean;
   customerName?: string;
 }

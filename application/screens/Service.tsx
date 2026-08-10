@@ -14,6 +14,7 @@ import {
     ScrollView,
     TextInput,
     ActivityIndicator,
+    Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLinesDropdown } from '../hooks/useApi';
@@ -27,6 +28,7 @@ import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatAmountInput, formatNumberWithSeparator } from '../utils/currency';
 import { colors, fonts } from '../theme/colors';
 
+const appLogo = require('../assets/images/logo.png');
 interface ServiceOption {
     id: string;
     title: string;
@@ -128,11 +130,15 @@ function ServiceContent({
         setShowLogoutModal(false);
     };
 
+    const branchLogo = (
+        <Image source={appLogo} style={styles.headerLogo} resizeMode="contain" />
+    );
+
     // Handle loading state
     if (isLoading) {
         return (
             <View style={styles.container}>
-                <PosTopBar title={selectedBranch?.title || 'خدمات'} />
+                <PosTopBar title={selectedBranch?.title || 'خدمات'} leading={branchLogo} />
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.orange} />
                     <Text style={styles.loadingText}>در حال بارگذاری خدمات...</Text>
@@ -147,6 +153,7 @@ function ServiceContent({
             <View style={styles.container}>
                 <PosTopBar
                     title="خدمات"
+                    leading={branchLogo}
                     right={
                         <TouchableOpacity style={styles.headerAction} onPress={handleLogoutPress}>
                             <Text style={styles.headerActionText}>خروج</Text>
@@ -174,6 +181,7 @@ function ServiceContent({
         <View style={styles.container}>
             <PosTopBar
                 title={selectedBranch?.title || 'خدمات'}
+                leading={branchLogo}
                 right={
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.headerAction} onPress={handleBranchChangePress}>
@@ -438,6 +446,10 @@ const styles = StyleSheet.create({
         color: colors.orangeDeep,
         fontSize: 12,
         fontFamily: fonts.bold,
+    },
+    headerLogo: {
+        width: 36,
+        height: 28,
     },
 });
 

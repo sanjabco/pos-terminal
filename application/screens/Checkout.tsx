@@ -12,11 +12,14 @@ import {
   ActivityIndicator,
   Switch,
   Keyboard,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { PosTopBar } from '../components/PosTopBar';
 import { FooterBar, FooterButton } from '../components/FooterBar';
+import MoneyIcon from '../components/MoneyIcon';
 import { useAuth } from '../hooks/useAuth';
 import { useCustomer, useCashbacks, useLinesDropdown, fetchShareDiscountPreview } from '../hooks/useApi';
 import { useServiceContext } from '../providers/ServiceProvider';
@@ -53,9 +56,6 @@ const isBirthdayDiscount = (d: CustomerActiveDiscount) =>
 const isAnniversaryDiscount = (d: CustomerActiveDiscount) =>
   Number(d.type) === 5 || d.typeLabel?.includes('سالگرد');
 
-const isOccasionDiscount = (d: CustomerActiveDiscount) =>
-  isBirthdayDiscount(d) || isAnniversaryDiscount(d);
-
 const convertPersianToEnglish = (persianNumber: string): string => {
   const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
   const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -73,14 +73,13 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedOption, setSelectedOption] = useState('useCredit');
-  const [applyDiscount, setApplyDiscount] = useState(true);
+  const [selectedDiscountId, setSelectedDiscountId] = useState<number | null>(null);
   const [customerData, setCustomerData] = useState<Customer | null>(null);
-  const [newCustomerName, setNewCustomerName] = useState('');
-  const [newCustomerNameError, setNewCustomerNameError] = useState('');
   const [credit, setCredit] = useState(0);
   const [sharePreview, setSharePreview] = useState<ShareDiscountPreviewItem[]>([]);
   const [sharePreviewLoading, setSharePreviewLoading] = useState(false);
   const [sharingEnabled, setSharingEnabled] = useState(true);
+  const [showMaxUsageModal, setShowMaxUsageModal] = useState(false);
 
   const englishPhoneNumber = convertPersianToEnglish(phoneNumber);
   const isValidPhone = englishPhoneNumber.length === 11 && englishPhoneNumber.startsWith('09');
@@ -94,12 +93,22 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   const { data: linesData } = useLinesDropdown(branchId);
 
   const discounts = customerData?.discounts || [];
-  const occasionDiscounts = discounts.filter(isOccasionDiscount);
-  const otherDiscounts = discounts.filter((d) => !isOccasionDiscount(d));
   const hasDiscounts = discounts.length > 0;
   const applyCredit = selectedOption === 'useCredit' && credit > 0;
-  const canApplyDiscount = hasDiscounts && !applyCredit;
+  const applyDiscount = selectedDiscountId != null && !applyCredit;
+  const selectedDiscount = discounts.find((d) => d.id === selectedDiscountId) ?? null;
   const customerReady = Boolean(customerData) && isValidPhone && !customerLoading;
+
+  const pickBestDiscountId = (list: CustomerActiveDiscount[]): number | null => {
+    if (!list.length) return null;
+    const sorted = [...list].sort((a, b) => {
+      const aFixed = Number(a.fixedAmount) || 0;
+      const bFixed = Number(b.fixedAmount) || 0;
+      if (aFixed !== bFixed) return bFixed - aFixed;
+      return Number(b.percent) - Number(a.percent);
+    });
+    return sorted[0]?.id ?? null;
+  };
 
   useEffect(() => {
     if (isValidPhone) {
@@ -112,8 +121,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       if (!isValidPhone) {
         setCustomerData(null);
         setCredit(0);
-        setNewCustomerName('');
-        setNewCustomerNameError('');
+        setSelectedDiscountId(null);
         return;
       }
 
@@ -123,12 +131,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         setCustomerData(data);
         setCredit(creditAmount);
         setSelectedOption(creditAmount > 0 ? 'useCredit' : 'saveForLater');
-        if (data.isNewCustomer) {
-          setNewCustomerName(data.name && data.name !== 'کاربر جدید' ? data.name : '');
-        } else {
-          setNewCustomerName('');
-        }
-        setNewCustomerNameError('');
+        setSelectedDiscountId(pickBestDiscountId(data.discounts || []));
         try {
           await AsyncStorage.setItem('customerData', JSON.stringify(data));
           await AsyncStorage.setItem('phoneNumber', phoneNumber);
@@ -151,8 +154,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         setCustomerData(defaultCustomer);
         setCredit(0);
         setSelectedOption('saveForLater');
-        setNewCustomerName('');
-        setNewCustomerNameError('');
+        setSelectedDiscountId(null);
         try {
           await AsyncStorage.setItem('customerData', JSON.stringify(defaultCustomer));
           await AsyncStorage.setItem('phoneNumber', phoneNumber);
@@ -165,23 +167,6 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
 
     syncCustomer();
   }, [customerResponse, isValidPhone, englishPhoneNumber, phoneNumber, branchId]);
-
-  const persistCustomerName = async (name: string) => {
-    setNewCustomerName(name);
-    if (newCustomerNameError) {
-      setNewCustomerNameError('');
-    }
-    if (!customerData?.isNewCustomer) {
-      return;
-    }
-    const updated = { ...customerData, name };
-    setCustomerData(updated);
-    try {
-      await AsyncStorage.setItem('customerData', JSON.stringify(updated));
-    } catch (error) {
-      console.error('Error saving customer name:', error);
-    }
-  };
 
   const activeCashbacks = useMemo(() => {
     if (cashbacksData?.Code !== 200 || !cashbacksData?.Data?.cashBackModel) {
@@ -211,24 +196,18 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   };
 
   const getApplicableDiscount = (lineId: number): CustomerActiveDiscount | null => {
-    if (!discounts.length) return null;
-    const matches = discounts.filter((discount) => {
-      const branchOk = discount.branchId == null || Number(discount.branchId) === branchId;
-      const lineOk = discount.lineId == null || Number(discount.lineId) === Number(lineId);
-      return branchOk && lineOk;
-    });
-    return matches.sort((a, b) => {
-      const aFixed = Number(a.fixedAmount) || 0;
-      const bFixed = Number(b.fixedAmount) || 0;
-      if (aFixed !== bFixed) return bFixed - aFixed;
-      return Number(b.percent) - Number(a.percent);
-    })[0] ?? null;
+    if (!selectedDiscount) return null;
+    const branchOk =
+      selectedDiscount.branchId == null || Number(selectedDiscount.branchId) === branchId;
+    const lineOk =
+      selectedDiscount.lineId == null || Number(selectedDiscount.lineId) === Number(lineId);
+    return branchOk && lineOk ? selectedDiscount : null;
   };
 
   const linePreviews: LinePreview[] = useMemo(() => {
     const servicesWithPrices = getServicesWithPrices();
     let remainingCredit = applyCredit ? credit : 0;
-    const shouldApplyDiscount = applyDiscount && !applyCredit;
+    const shouldApplyDiscount = applyDiscount;
 
     return servicesWithPrices.map((service) => {
       const price = parseAmount(service.amount);
@@ -262,6 +241,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     applyCredit,
     credit,
     applyDiscount,
+    selectedDiscountId,
     discounts,
     linesData,
   ]);
@@ -271,6 +251,23 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   const creditUsed = linePreviews.reduce((sum, p) => sum + p.payFromCredit, 0);
   const finalAmountToPay = linePreviews.reduce((sum, p) => sum + p.cashPayment, 0);
   const totalAfterDiscount = linePreviews.reduce((sum, p) => sum + p.adjustedPrice, 0);
+
+  const maxCreditUsage = useMemo(() => {
+    const servicesWithPrices = getServicesWithPrices();
+    const maxUsagePerLine = servicesWithPrices.map((service) => {
+      const price = parseAmount(service.amount);
+      const lineId = parseInt(service.id, 10);
+      return {
+        lineId,
+        lineTitle: service.title,
+        maxUsage: getLineMaxCreditRials(lineId, price),
+      };
+    });
+    const totalMaxUsage = maxUsagePerLine.reduce((sum, item) => sum + item.maxUsage, 0);
+    return { totalMaxUsage, maxUsagePerLine };
+  }, [selectedServices, linesData]);
+
+  const usageCeiling = Math.min(credit, maxCreditUsage.totalMaxUsage || credit);
 
   useEffect(() => {
     if (!isValidPhone || !branchId || linePreviews.length === 0) {
@@ -324,12 +321,6 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     }
 
     const isNewCustomer = Boolean(customerData?.isNewCustomer);
-    const trimmedName = newCustomerName.trim();
-    if (isNewCustomer && !trimmedName) {
-      setNewCustomerNameError('نام مشتری الزامی است');
-      showError('لطفا نام مشتری را وارد کنید');
-      return null;
-    }
 
     return {
       cashBackDto: linePreviews.map((preview) => ({
@@ -345,9 +336,9 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       shouldSendMessage: true,
       branchId,
       applyCredit,
-      applyDiscount: applyDiscount && canApplyDiscount,
+      applyDiscount,
+      ...(applyDiscount && selectedDiscountId != null ? { discountId: selectedDiscountId } : {}),
       confirmNewCustomer: isNewCustomer,
-      ...(isNewCustomer ? { customerName: trimmedName } : {}),
     };
   };
 
@@ -404,16 +395,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.summaryChip}>
-          <Text style={styles.summaryChipText}>
-            مبلغ خرید: {formatNumberWithSeparator(totalAmount)} {CURRENCY_LABEL}
-          </Text>
-          <Text style={styles.summaryChipSub}>
-            {activeCashbacks.length > 0
-              ? 'از این خرید بازگشت اعتبار می‌گیرید'
-              : 'از این خرید بازگشت اعتبار نمی‌گیرید'}
-          </Text>
-        </View>
+
 
         <Text style={styles.sectionLabel}>شماره همراه مشتری</Text>
         <TextInput
@@ -439,168 +421,180 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         )}
 
         {customerReady && customerData && (
-          <>
-            <View style={styles.card}>
-              {(customerData.isNewCustomer || customerData.isFirstBuyEligible) && (
-                <Text style={styles.newCustomerText}>
-                  {customerData.isNewCustomer
-                    ? 'مشتری جدید — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'
-                    : 'اولین خرید این مشتری — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'}
-                </Text>
-              )}
-              {customerData.isNewCustomer ? (
-                <View style={styles.nameField}>
-                  <Text style={styles.nameFieldLabel}>
-                    نام مشتری <Text style={styles.requiredMark}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.nameInput,
-                      !!newCustomerNameError && styles.nameInputError,
-                    ]}
-                    value={newCustomerName}
-                    onChangeText={persistCustomerName}
-                    placeholder="نام مشتری را وارد کنید"
-                    placeholderTextColor="#999"
-                    textAlign="right"
-                    autoCorrect={false}
-                  />
-                  {!!newCustomerNameError && (
-                    <Text style={styles.nameErrorText}>{newCustomerNameError}</Text>
-                  )}
-                </View>
-              ) : (
-                <View style={styles.row}>
-                  <Text style={styles.rowValue}>{customerData.name || '—'}</Text>
-                  <Text style={styles.rowLabel}>نام</Text>
-                </View>
-              )}
-              <View style={styles.row}>
-                <Text style={styles.rowValue}>
-                  {formatNumberWithSeparator(credit)} {CURRENCY_LABEL}
-                </Text>
-                <Text style={styles.rowLabel}>اعتبار (کش‌بک)</Text>
+          <View style={styles.creditHeroCard}>
+            <View style={styles.creditHeroTop}>
+              <View style={styles.creditHeroLabelRow}>
+                <MoneyIcon width={20} height={20} />
+                <Text style={styles.creditHeroLabel}>اعتبار قابل استفاده</Text>
               </View>
-              {!!customerData.subscriptionCode && (
-                <View style={styles.row}>
-                  <Text style={styles.rowValue}>{customerData.subscriptionCode}</Text>
-                  <Text style={styles.rowLabel}>اشتراک</Text>
-                </View>
-              )}
+              <Text style={styles.creditHeroAmount}>
+                {formatNumberWithSeparator(credit)} {CURRENCY_LABEL}
+              </Text>
             </View>
+            <View style={styles.creditHeroBottom}>
+              <View style={styles.creditCeilingBlock}>
+                <Text style={styles.creditCeilingLabel}>سقف استفاده</Text>
+                <Text style={styles.creditCeilingValue}>
+                  {formatNumberWithSeparator(usageCeiling)} {CURRENCY_LABEL}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.creditDetailsBtn}
+                onPress={() => setShowMaxUsageModal(true)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.creditDetailsBtnText}>جزئیات</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
-            {occasionDiscounts.length > 0 && (
+        {/* <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipText}>
+            مبلغ خرید: {formatNumberWithSeparator(totalAmount)} {CURRENCY_LABEL}
+          </Text>
+          <Text style={styles.summaryChipSub}>
+            {activeCashbacks.length > 0
+              ? 'از این خرید بازگشت اعتبار می‌گیرید'
+              : 'از این خرید بازگشت اعتبار نمی‌گیرید'}
+          </Text>
+        </View> */}
+
+        {customerReady && customerData && (
+          <>
+            {(customerData.isNewCustomer || customerData.isFirstBuyEligible || !!customerData.subscriptionCode) && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>هدیه تولد و سالگرد</Text>
-                {occasionDiscounts.map((discount) => (
-                  <View
-                    key={`occasion-${discount.id}`}
-                    style={[
-                      styles.discountChip,
-                      isBirthdayDiscount(discount)
-                        ? styles.birthdayChip
-                        : styles.anniversaryChip,
-                    ]}
-                  >
-                    <Text style={styles.discountStrong}>{formatDiscountValue(discount)}</Text>
-                    <Text style={styles.discountMeta}>
-                      {' '}
-                      {isBirthdayDiscount(discount) ? 'هدیه تولد' : 'هدیه سالگرد ازدواج'}
-                    </Text>
-                    {!!discount.lineTitle && (
-                      <Text style={styles.discountMeta}> · {discount.lineTitle}</Text>
-                    )}
-                    <Text style={styles.discountDate}> · تا {discount.toDate}</Text>
-                  </View>
-                ))}
-                {applyCredit && (
-                  <Text style={styles.hint}>
-                    با استفاده از اعتبار، این تخفیف اعمال نمی‌شود.
+                {(customerData.isNewCustomer || customerData.isFirstBuyEligible) && (
+                  <Text style={styles.newCustomerText}>
+                    {customerData.isNewCustomer
+                      ? 'مشتری جدید — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'
+                      : 'اولین خرید این مشتری — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'}
                   </Text>
+                )}
+                {!!customerData.subscriptionCode && (
+                  <View style={styles.row}>
+                    <Text style={styles.rowValue}>{customerData.subscriptionCode}</Text>
+                    <Text style={styles.rowLabel}>اشتراک</Text>
+                  </View>
                 )}
               </View>
             )}
 
-            {otherDiscounts.length > 0 && (
+            {hasDiscounts && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>تخفیف‌های فعال</Text>
-                {otherDiscounts.map((discount) => (
-                  <View key={discount.id} style={styles.discountChip}>
-                    <Text style={styles.discountStrong}>{formatDiscountValue(discount)}</Text>
-                    <Text style={styles.discountMeta}> {discount.typeLabel}</Text>
-                    {!!discount.lineTitle && <Text style={styles.discountMeta}> · {discount.lineTitle}</Text>}
-                    <Text style={styles.discountDate}> · تا {discount.toDate}</Text>
-                  </View>
-                ))}
+                <Text style={styles.cardTitle}>انتخاب تخفیف یا هدیه</Text>
                 {applyCredit && (
                   <Text style={styles.hint}>
                     با استفاده از اعتبار، تخفیف اعمال نمی‌شود.
                   </Text>
                 )}
+                {discounts.map((discount) => {
+                  const selected = selectedDiscountId === discount.id && !applyCredit;
+                  const disabled = applyCredit;
+                  const title = isBirthdayDiscount(discount)
+                    ? 'هدیه تولد'
+                    : isAnniversaryDiscount(discount)
+                      ? 'هدیه سالگرد ازدواج'
+                      : discount.typeLabel || 'تخفیف';
+                  return (
+                    <TouchableOpacity
+                      key={discount.id}
+                      style={[
+                        styles.discountOption,
+                        isBirthdayDiscount(discount) && styles.birthdayChip,
+                        isAnniversaryDiscount(discount) && styles.anniversaryChip,
+                        selected && styles.discountOptionSelected,
+                        disabled && styles.discountOptionDisabled,
+                      ]}
+                      onPress={() => {
+                        if (disabled) return;
+                        setSelectedDiscountId(discount.id);
+                      }}
+                      activeOpacity={disabled ? 1 : 0.85}
+                    >
+                      <View style={styles.discountOptionBody}>
+                        <Text style={styles.discountStrong}>{formatDiscountValue(discount)}</Text>
+                        <Text style={styles.discountMeta}> {title}</Text>
+                        {!!discount.lineTitle && (
+                          <Text style={styles.discountMeta}> · {discount.lineTitle}</Text>
+                        )}
+                        <Text style={styles.discountDate}> · تا {discount.toDate}</Text>
+                      </View>
+                      <View style={[styles.discountRadio, selected && styles.discountRadioActive]}>
+                        {selected && <View style={styles.discountRadioDot} />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={[
+                    styles.discountOption,
+                    styles.discountNoneOption,
+                    selectedDiscountId == null && !applyCredit && styles.discountOptionSelected,
+                    applyCredit && styles.discountOptionDisabled,
+                  ]}
+                  onPress={() => {
+                    if (applyCredit) return;
+                    setSelectedDiscountId(null);
+                  }}
+                  activeOpacity={applyCredit ? 1 : 0.85}
+                >
+                  <Text style={styles.discountNoneText}>بدون تخفیف</Text>
+                  <View
+                    style={[
+                      styles.discountRadio,
+                      selectedDiscountId == null && !applyCredit && styles.discountRadioActive,
+                    ]}
+                  >
+                    {selectedDiscountId == null && !applyCredit && (
+                      <View style={styles.discountRadioDot} />
+                    )}
+                  </View>
+                </TouchableOpacity>
               </View>
             )}
 
             {credit > 0 && (
-              <View style={styles.card}>
-                <TouchableOpacity
-                  style={[styles.optionRow, selectedOption === 'useCredit' && styles.optionRowActive]}
-                  onPress={() => setSelectedOption('useCredit')}
-                >
-                  <Text style={styles.optionText}>استفاده از اعتبار</Text>
-                  <View style={[styles.radio, selectedOption === 'useCredit' && styles.radioActive]}>
-                    {selectedOption === 'useCredit' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.optionRow, selectedOption === 'saveForLater' && styles.optionRowActive]}
-                  onPress={() => setSelectedOption('saveForLater')}
-                >
-                  <Text style={styles.optionText}>ذخیره برای بعد</Text>
-                  <View style={[styles.radio, selectedOption === 'saveForLater' && styles.radioActive]}>
-                    {selectedOption === 'saveForLater' && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {canApplyDiscount && (
               <View style={styles.switchRow}>
                 <Switch
-                  value={applyDiscount}
-                  onValueChange={setApplyDiscount}
+                  value={selectedOption === 'useCredit'}
+                  onValueChange={(enabled) =>
+                    setSelectedOption(enabled ? 'useCredit' : 'saveForLater')
+                  }
                   trackColor={{ false: '#CCCCCC', true: '#81C784' }}
-                  thumbColor={applyDiscount ? '#4CAF50' : '#f4f3f4'}
+                  thumbColor={selectedOption === 'useCredit' ? '#4CAF50' : '#f4f3f4'}
                 />
-                <Text style={styles.optionText}>اعمال تخفیف</Text>
+                <Text style={styles.optionText}>استفاده از اعتبار</Text>
               </View>
             )}
 
-            <View style={styles.card}>
+            <View style={styles.shareCard}>
               <View style={styles.shareHeader}>
-                <Text style={styles.cardTitle}>اشتراک‌گذاری هوشمند</Text>
+                <Text style={styles.shareCardTitle}>اشتراک‌گذاری هوشمند</Text>
                 {sharePreviewLoading && <ActivityIndicator size="small" color="#1abc9c" />}
               </View>
               {!sharingEnabled ? (
-                <Text style={styles.hint}>اشتراک‌گذاری هوشمند برای این فروشگاه فعال نیست.</Text>
+                <Text style={styles.shareHint}>برای این فروشگاه فعال نیست.</Text>
               ) : sharePreview.length > 0 ? (
                 sharePreview.map((item) => (
                   <View key={item.businessId} style={styles.shareItem}>
-                    <View style={styles.row}>
+                    <Text style={styles.shareTitle} numberOfLines={1}>
+                      {item.businessTitle}
+                    </Text>
+                    <Text style={styles.shareMeta}>
                       <Text style={styles.sharePercent}>
                         {formatNumberWithSeparator(Number(item.discountPercent) || 0)}٪
                       </Text>
-                      <Text style={styles.shareTitle}>{item.businessTitle}</Text>
-                    </View>
-                    <Text style={styles.hint}>
-                      مهلت: {formatNumberWithSeparator(Number(item.expirationDays) || 0)} روز
+                      {' · '}
+                      {formatNumberWithSeparator(Number(item.expirationDays) || 0)} روز
                       {item.distanceKm != null
-                        ? ` · فاصله: ${formatNumberWithSeparator(Number(item.distanceKm))} کیلومتر`
+                        ? ` · ${formatNumberWithSeparator(Number(item.distanceKm))} کم`
                         : ''}
                     </Text>
                   </View>
                 ))
               ) : !sharePreviewLoading ? (
-                <Text style={styles.hint}>فروشگاهی برای پیشنهاد نیست.</Text>
+                <Text style={styles.shareHint}>فروشگاهی برای پیشنهاد نیست.</Text>
               ) : null}
             </View>
           </>
@@ -610,10 +604,16 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       <FooterBar
         top={
           <View style={styles.amountBar}>
+            <View style={styles.amountRow}>
+              <Text style={styles.amountValue}>
+                {formatNumberWithSeparator(totalAmount)} {CURRENCY_LABEL}
+              </Text>
+              <Text style={styles.amountLabel}>مبلغ اصلی</Text>
+            </View>
             {totalDiscountAmount > 0 && (
               <View style={styles.amountRow}>
                 <Text style={[styles.amountValue, { color: colors.live }]}>
-                  {formatNumberWithSeparator(totalDiscountAmount)} {CURRENCY_LABEL}
+                  {formatNumberWithSeparator(totalDiscountAmount)} {CURRENCY_LABEL}-
                 </Text>
                 <Text style={styles.amountLabel}>تخفیف</Text>
               </View>
@@ -621,12 +621,12 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
             {creditUsed > 0 && (
               <View style={styles.amountRow}>
                 <Text style={styles.amountValue}>
-                  {formatNumberWithSeparator(creditUsed)} {CURRENCY_LABEL}
+                  {formatNumberWithSeparator(creditUsed)} {CURRENCY_LABEL}-
                 </Text>
                 <Text style={styles.amountLabel}>اعتبار</Text>
               </View>
             )}
-            <View style={[styles.amountRow, (totalDiscountAmount > 0 || creditUsed > 0) && styles.amountRowFinal]}>
+            <View style={[styles.amountRow, styles.amountRowFinal]}>
               <Text style={styles.amountValueBold}>
                 {formatNumberWithSeparator(finalAmountToPay)} {CURRENCY_LABEL}
               </Text>
@@ -646,6 +646,44 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
           </>
         )}
       </FooterBar>
+
+      <Modal
+        visible={showMaxUsageModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMaxUsageModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.bottomSheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMaxUsageModal(false)}
+        >
+          <View style={styles.bottomSheetContainer}>
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.bottomSheetHandle} />
+              <View style={styles.bottomSheetHeader}>
+                <Text style={styles.bottomSheetTitle}>سقف استفاده به تفکیک سرویس</Text>
+                <TouchableOpacity
+                  onPress={() => setShowMaxUsageModal(false)}
+                  style={styles.bottomSheetCloseButton}
+                >
+                  <Text style={styles.bottomSheetCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.bottomSheetBody}>
+                {maxCreditUsage.maxUsagePerLine.map((item) => (
+                  <View key={item.lineId} style={styles.bottomSheetLineItem}>
+                    <Text style={styles.bottomSheetLineTitle}>{item.lineTitle}</Text>
+                    <Text style={styles.bottomSheetLineValue}>
+                      {formatNumberWithSeparator(item.maxUsage)} {CURRENCY_LABEL}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -724,6 +762,69 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     fontFamily: fonts.regular,
   },
+  creditHeroCard: {
+    marginTop: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: colors.orange,
+  },
+  creditHeroTop: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+    alignItems: 'center',
+  },
+  creditHeroLabelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-end',
+    marginBottom: 4,
+  },
+  creditHeroLabel: {
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.92)',
+  },
+  creditHeroAmount: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  creditHeroBottom: {
+    backgroundColor: colors.orangeDeep,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  creditCeilingBlock: {
+    alignItems: 'flex-end',
+  },
+  creditCeilingLabel: {
+    fontSize: 10,
+    fontFamily: fonts.regular,
+    color: 'rgba(255,255,255,0.85)',
+    marginBottom: 1,
+  },
+  creditCeilingValue: {
+    fontSize: 12.5,
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+  },
+  creditDetailsBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  creditDetailsBtnText: {
+    color: colors.orangeDeep,
+    fontSize: 11,
+    fontFamily: fonts.bold,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: 18,
@@ -749,40 +850,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     textAlign: 'right',
   },
-  nameField: {
-    marginBottom: 12,
-  },
-  nameFieldLabel: {
-    fontSize: 12,
-    color: colors.inkSoft,
-    fontFamily: fonts.regular,
-    textAlign: 'right',
-    marginBottom: 6,
-  },
-  requiredMark: {
-    color: colors.danger,
-  },
-  nameInput: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    backgroundColor: colors.bg,
-    fontFamily: fonts.bold,
-    color: colors.ink,
-  },
-  nameInputError: {
-    borderColor: colors.danger,
-  },
-  nameErrorText: {
-    marginTop: 4,
-    fontSize: 11,
-    color: colors.danger,
-    fontFamily: fonts.regular,
-    textAlign: 'right',
-  },
   row: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
@@ -799,15 +866,61 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fonts.bold,
   },
-  discountChip: {
+  discountOption: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    backgroundColor: colors.liveBg,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  discountOptionSelected: {
+    borderColor: colors.orange,
+    backgroundColor: colors.orangeTint,
+  },
+  discountOptionDisabled: {
+    opacity: 0.55,
+  },
+  discountOptionBody: {
+    flex: 1,
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     alignItems: 'center',
-    backgroundColor: colors.liveBg,
+  },
+  discountNoneOption: {
+    backgroundColor: colors.bg,
+  },
+  discountNoneText: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: colors.ink,
+  },
+  discountRadio: {
+    width: 20,
+    height: 20,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 6,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  discountRadioActive: {
+    borderColor: colors.orange,
+    backgroundColor: colors.orange,
+  },
+  discountRadioDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FFFFFF',
   },
   birthdayChip: {
     backgroundColor: colors.orangeTint,
@@ -837,47 +950,12 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 4,
   },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    marginBottom: 8,
-    backgroundColor: colors.bg,
-  },
-  optionRowActive: {
-    borderColor: colors.orange,
-    backgroundColor: colors.orangeTint,
-  },
   optionText: {
     flex: 1,
     textAlign: 'right',
     fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.ink,
-  },
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: colors.line,
-    marginLeft: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioActive: {
-    borderColor: colors.orange,
-    backgroundColor: colors.orange,
-  },
-  radioDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'white',
   },
   switchRow: {
     marginTop: 12,
@@ -891,29 +969,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
+  shareCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
   shareHeader: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  shareCardTitle: {
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    textAlign: 'right',
   },
   shareItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
     backgroundColor: colors.liveBg,
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 6,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginTop: 4,
   },
   shareTitle: {
     flex: 1,
     textAlign: 'right',
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontFamily: fonts.bold,
     color: colors.ink,
   },
+  shareMeta: {
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: colors.inkSoft,
+    textAlign: 'left',
+  },
   sharePercent: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontFamily: fonts.bold,
     color: colors.live,
-    marginLeft: 8,
+  },
+  shareHint: {
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: colors.inkSoft,
+    textAlign: 'right',
   },
   amountBar: {
     backgroundColor: colors.bg,
@@ -954,6 +1064,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.ink,
+  },
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContainer: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.line,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  bottomSheetTitle: {
+    fontSize: 15,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    flex: 1,
+    textAlign: 'right',
+  },
+  bottomSheetCloseButton: {
+    padding: 4,
+    marginLeft: 10,
+  },
+  bottomSheetCloseText: {
+    fontSize: 22,
+    color: colors.inkSoft,
+    fontFamily: fonts.regular,
+  },
+  bottomSheetBody: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    maxHeight: 360,
+  },
+  bottomSheetLineItem: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  bottomSheetLineTitle: {
+    fontSize: 13.5,
+    fontFamily: fonts.medium,
+    color: colors.ink,
+    flex: 1,
+    textAlign: 'right',
+  },
+  bottomSheetLineValue: {
+    fontSize: 13.5,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    marginLeft: 12,
   },
 });
 

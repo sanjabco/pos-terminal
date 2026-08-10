@@ -12,8 +12,7 @@ import { Fonts } from './application/config/fonts';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AppBootstrap } from './application/components/AppBootstrap';
-
-// Import existing screen components
+import { disableSystemRtl } from './application/utils/rtl';
 import Service from './application/screens/Service';
 import Payment from './application/screens/Payment';
 import Report from './application/screens/Report';
@@ -26,14 +25,14 @@ import Login from './application/screens/Login';
 import BranchSelection from './application/screens/BranchSelection';
 import NativePaymentTest from './application/screens/NativePaymentTest';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
-// Import React Query provider and auth hook
 import { QueryProvider } from './application/providers/QueryProvider';
 import { ServiceProvider } from './application/providers/ServiceProvider';
 import { InternetProvider } from './application/providers/InternetProvider';
 import { SnackbarProvider } from './application/providers/SnackbarProvider';
 import { AuthProvider, useAuth } from './application/hooks/useAuth';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+
+disableSystemRtl();
 
 // Create the stack navigator
 const Stack = createStackNavigator();

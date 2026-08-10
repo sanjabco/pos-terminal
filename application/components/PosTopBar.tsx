@@ -8,11 +8,13 @@ type PosTopBarProps = {
   title: string;
   onBack?: () => void;
   right?: React.ReactNode;
+  /** Shown on the right of the title when there is no back button */
+  leading?: React.ReactNode;
   dark?: boolean;
 };
 
 /** Light top bar matching customer-app TopBar */
-export function PosTopBar({ title, onBack, right, dark }: PosTopBarProps) {
+export function PosTopBar({ title, onBack, right, leading, dark }: PosTopBarProps) {
   const insets = useSafeAreaInsets();
   const bg = dark ? colors.navy : colors.surface;
   const fg = dark ? '#fff' : colors.ink;
@@ -37,6 +39,8 @@ export function PosTopBar({ title, onBack, right, dark }: PosTopBarProps) {
           >
             <ArrowRight height={22} color={fg} />
           </TouchableOpacity>
+        ) : leading ? (
+          <View style={styles.leadingSlot}>{leading}</View>
         ) : (
           <View style={styles.backBtnPlaceholder} />
         )}
@@ -68,6 +72,10 @@ const styles = StyleSheet.create({
   backBtnPlaceholder: {
     width: 34,
     height: 34,
+  },
+  leadingSlot: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     flex: 1,
