@@ -343,12 +343,22 @@ export interface CustomerActiveDiscount {
   id: number;
   percent: number;
   fixedAmount?: number;
-  type: number;
+  type: number | string;
   typeLabel: string;
   toDate: string;
   lineId?: number;
   lineTitle?: string;
   branchId?: number;
+}
+
+export interface OccasionGift {
+  giftType: string;
+  amountTomans: number;
+  discountPercent: number;
+  itemDescription?: string | null;
+  discountId?: number;
+  creditId?: number;
+  toDate: string;
 }
 
 export interface Customer {
@@ -360,6 +370,8 @@ export interface Customer {
   discounts?: CustomerActiveDiscount[];
   isNewCustomer?: boolean;
   isFirstBuyEligible?: boolean;
+  birthdayGift?: OccasionGift | null;
+  anniversaryGift?: OccasionGift | null;
 }
 
 export interface CashBackDto {

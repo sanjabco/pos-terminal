@@ -68377,9 +68377,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
         })
       }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.ScrollView, {
         style: styles.scroll,
-        contentContainerStyle: [styles.scrollContent, {
-          paddingBottom: 28
-        }],
+        contentContainerStyle: styles.scrollContent,
         keyboardShouldPersistTaps: "handled",
         showsVerticalScrollIndicator: false,
         children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
@@ -68431,6 +68429,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           }, serviceId);
         })]
       }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[16]).FooterBar, {
+        compact: true,
         top: selectedServices.length > 0 ? /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
           style: styles.totalBar,
           children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
@@ -68442,6 +68441,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           })]
         }) : undefined,
         children: /*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[16]).FooterButton, {
+          compact: true,
           label: "\u0627\u062F\u0627\u0645\u0647",
           disabled: !canContinue,
           onPress: function onPress() {
@@ -68472,28 +68472,30 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       flex: 1
     },
     scrollContent: {
-      paddingHorizontal: 18,
-      paddingTop: 18
+      paddingHorizontal: 12,
+      paddingTop: 8,
+      paddingBottom: 16
     },
     instructionText: {
-      fontSize: 13.5,
+      fontSize: 12,
       color: _$$_REQUIRE(_dependencyMap[15]).colors.ink,
       textAlign: 'right',
-      marginBottom: 14,
+      marginBottom: 8,
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.bold
     },
     serviceOption: {
-      paddingVertical: 14,
-      paddingHorizontal: 14,
-      marginBottom: 10,
-      borderRadius: 18,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      marginBottom: 6,
+      borderRadius: 12,
       borderWidth: 1,
       backgroundColor: _$$_REQUIRE(_dependencyMap[15]).colors.surface
     },
     serviceOptionHeader: {
       flexDirection: 'row-reverse',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      minHeight: 28
     },
     serviceOptionUnselected: {
       borderColor: _$$_REQUIRE(_dependencyMap[15]).colors.line
@@ -68504,21 +68506,21 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     },
     serviceOptionText: {
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.bold,
-      fontSize: 14,
+      fontSize: 13,
       color: _$$_REQUIRE(_dependencyMap[15]).colors.ink,
       textAlign: 'right',
       flex: 1
     },
     checkCircle: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       borderWidth: 1.5,
       borderColor: _$$_REQUIRE(_dependencyMap[15]).colors.line,
       backgroundColor: _$$_REQUIRE(_dependencyMap[15]).colors.bg,
       alignItems: 'center',
       justifyContent: 'center',
-      marginLeft: 10
+      marginLeft: 8
     },
     checkCircleOn: {
       backgroundColor: _$$_REQUIRE(_dependencyMap[15]).colors.orange,
@@ -68526,58 +68528,58 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     },
     checkmarkText: {
       color: 'white',
-      fontSize: 12,
+      fontSize: 11,
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.bold
     },
     amountRow: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: _$$_REQUIRE(_dependencyMap[15]).colors.surface,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
       borderWidth: 1,
       borderColor: _$$_REQUIRE(_dependencyMap[15]).colors.line,
-      marginTop: 12
+      marginTop: 6
     },
     currencyTag: {
       backgroundColor: _$$_REQUIRE(_dependencyMap[15]).colors.orangeTint,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 14,
-      marginRight: 10
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+      marginRight: 8
     },
     currencyTagText: {
       color: _$$_REQUIRE(_dependencyMap[15]).colors.orangeDeep,
-      fontSize: 11,
+      fontSize: 10,
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.bold
     },
     amountInput: {
       flex: 1,
-      fontSize: 15,
+      fontSize: 14,
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[15]).colors.ink,
       textAlign: 'left',
-      paddingVertical: 4
+      paddingVertical: 2
     },
     totalBar: {
       backgroundColor: _$$_REQUIRE(_dependencyMap[15]).colors.bg,
-      borderRadius: 16,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: _$$_REQUIRE(_dependencyMap[15]).colors.line,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       flexDirection: 'row-reverse',
       justifyContent: 'space-between',
       alignItems: 'center'
     },
     totalBarLabel: {
-      fontSize: 12.5,
+      fontSize: 11,
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.medium,
       color: _$$_REQUIRE(_dependencyMap[15]).colors.inkSoft
     },
     totalBarValue: {
-      fontSize: 16,
+      fontSize: 13.5,
       fontFamily: _$$_REQUIRE(_dependencyMap[15]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[15]).colors.ink
     },
@@ -91643,6 +91645,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       variant = _ref$variant === undefined ? 'primary' : _ref$variant,
       _ref$flex = _ref.flex,
       flex = _ref$flex === undefined ? 1 : _ref$flex,
+      compact = _ref.compact,
       style = _ref.style;
     var isDisabled = disabled || loading;
     var showAsDisabled = Boolean(disabled) && !loading;
@@ -91651,7 +91654,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       onPress: onPress,
       disabled: isDisabled,
       activeOpacity: 0.88,
-      style: [styles.btn, {
+      style: [styles.btn, compact && styles.btnCompact, {
         flex: flex
       }, variant === 'primary' && styles.btnPrimary, variant === 'secondary' && styles.btnSecondary, variant === 'ghost' && styles.btnGhost, showAsDisabled && (variant === 'primary' ? styles.btnPrimaryDisabled : styles.btnMutedDisabled), style],
       children: loading ? /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
@@ -91673,17 +91676,18 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
   /** Sticky bottom bar with safe-area padding — customer-app style */
   function FooterBar(_ref2) {
     var children = _ref2.children,
-      top = _ref2.top;
+      top = _ref2.top,
+      compact = _ref2.compact;
     var insets = (0, _$$_REQUIRE(_dependencyMap[5]).useSafeAreaInsets)();
     return /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-      style: [styles.bar, {
-        paddingBottom: Math.max(insets.bottom, 14)
+      style: [styles.bar, compact && styles.barCompact, {
+        paddingBottom: Math.max(insets.bottom, compact ? 8 : 14)
       }],
       children: [top ? /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
-        style: styles.topSlot,
+        style: [styles.topSlot, compact && styles.topSlotCompact],
         children: top
       }) : null, /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
-        style: styles.row,
+        style: [styles.row, compact && styles.rowCompact],
         children: children
       })]
     });
@@ -91704,13 +91708,23 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       shadowRadius: 12,
       elevation: 8
     },
+    barCompact: {
+      paddingHorizontal: 12,
+      paddingTop: 8
+    },
     topSlot: {
       marginBottom: 12
+    },
+    topSlotCompact: {
+      marginBottom: 6
     },
     row: {
       flexDirection: 'row-reverse',
       alignItems: 'stretch',
       gap: 10
+    },
+    rowCompact: {
+      gap: 8
     },
     btn: {
       minHeight: 54,
@@ -91718,6 +91732,11 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 18
+    },
+    btnCompact: {
+      minHeight: 42,
+      borderRadius: 12,
+      paddingHorizontal: 12
     },
     btnPrimary: {
       backgroundColor: _$$_REQUIRE(_dependencyMap[4]).colors.orange,
@@ -93011,6 +93030,9 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
             }
             var response = yield createTransactionMutation.mutateAsync(transactionData == null ? undefined : transactionData.transactionResult);
             console.log('response', response.Data);
+            if (response != null && response.Code && response.Code !== 200 && response.Code !== 201) {
+              throw new Error(response.Message || 'Transaction failed');
+            }
             setResponseData(response.Data);
           } catch (error) {
             console.error('Transaction error:', error);
@@ -93358,16 +93380,23 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
   /** Backend DiscountType: Birthday=4, Anniversary=5 */
   var isBirthdayDiscount = function isBirthdayDiscount(d) {
     var _d$typeLabel;
-    return Number(d.type) === 4 || ((_d$typeLabel = d.typeLabel) == null ? undefined : _d$typeLabel.includes('تولد'));
+    var type = Number(d.type);
+    return type === 4 || String(d.type).toLowerCase() === 'birthday' || ((_d$typeLabel = d.typeLabel) == null ? undefined : _d$typeLabel.includes('تولد'));
   };
   var isAnniversaryDiscount = function isAnniversaryDiscount(d) {
     var _d$typeLabel2;
-    return Number(d.type) === 5 || ((_d$typeLabel2 = d.typeLabel) == null ? undefined : _d$typeLabel2.includes('سالگرد'));
+    var type = Number(d.type);
+    return type === 5 || String(d.type).toLowerCase() === 'anniversary' || ((_d$typeLabel2 = d.typeLabel) == null ? undefined : _d$typeLabel2.includes('سالگرد'));
   };
   var isOccasionDiscount = function isOccasionDiscount(d) {
     return isBirthdayDiscount(d) || isAnniversaryDiscount(d);
   };
+  var occasionCashAmountOf = function occasionCashAmountOf(gift) {
+    if (!gift || String(gift.giftType || '').toLowerCase() !== 'cash') return 0;
+    return Number(gift.amountTomans) || 0;
+  };
   function Credit(_ref) {
+    var _occasionDiscounts$;
     var navigation = _ref.navigation;
     var _useSnackbarContext = (0, _$$_REQUIRE(_dependencyMap[9]).useSnackbarContext)(),
       showError = _useSnackbarContext.showError;
@@ -93440,9 +93469,19 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     var otherDiscounts = discounts.filter(function (d) {
       return !isOccasionDiscount(d);
     });
+    var birthdayGift = customerData == null ? undefined : customerData.birthdayGift;
+    var anniversaryGift = customerData == null ? undefined : customerData.anniversaryGift;
+    var hasOccasionGift = occasionDiscounts.length > 0 || birthdayGift && birthdayGift.giftType !== 'discount' || anniversaryGift && anniversaryGift.giftType !== 'discount';
     var hasDiscounts = discounts.length > 0;
-    var applyCredit = selectedOption === 'useCredit' && credit > 0;
-    var canApplyDiscount = hasDiscounts && !applyCredit;
+    var birthdayCashAmount = occasionCashAmountOf(birthdayGift);
+    var anniversaryCashAmount = occasionCashAmountOf(anniversaryGift);
+    var occasionCreditAmount = birthdayCashAmount || anniversaryCashAmount;
+    var occasionCreditId = (birthdayCashAmount > 0 ? Number(birthdayGift == null ? undefined : birthdayGift.creditId) : 0) || (anniversaryCashAmount > 0 ? Number(anniversaryGift == null ? undefined : anniversaryGift.creditId) : 0) || 0;
+    var occasionDiscountId = ((_occasionDiscounts$ = occasionDiscounts[0]) == null ? undefined : _occasionDiscounts$.id) || Number(birthdayGift == null ? undefined : birthdayGift.discountId) || Number(anniversaryGift == null ? undefined : anniversaryGift.discountId) || 0;
+    var applyOccasionCredit = selectedOption !== 'useCredit' && occasionCreditAmount > 0 && occasionCreditId > 0;
+    var applyWalletCredit = selectedOption === 'useCredit' && credit > 0;
+    var applyCredit = applyWalletCredit || applyOccasionCredit;
+    var canApplyDiscount = hasDiscounts && !applyWalletCredit && !applyOccasionCredit;
     var creditOptions = [{
       id: 'useCredit',
       title: 'استفاده از اعتبار (کش‌بک)',
@@ -93487,19 +93526,31 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     };
     var buildLinePreviews = function buildLinePreviews() {
       var servicesWithPrices = getServicesWithPrices();
-      var remainingCredit = applyCredit ? credit : 0;
-      var shouldApplyDiscount = applyDiscount && !applyCredit;
+      var remainingCredit = applyOccasionCredit ? occasionCreditAmount : applyWalletCredit ? credit : 0;
+      var shouldApplyDiscount = applyDiscount && canApplyDiscount;
+      var remainingFixedDiscount = 0;
+      if (shouldApplyDiscount) {
+        var _servicesWithPrices$;
+        var previewDiscount = getApplicableDiscount(parseInt(((_servicesWithPrices$ = servicesWithPrices[0]) == null ? undefined : _servicesWithPrices$.id) || '0', 10));
+        var percent = Number(previewDiscount == null ? undefined : previewDiscount.percent) || 0;
+        remainingFixedDiscount = percent > 0 ? 0 : Number(previewDiscount == null ? undefined : previewDiscount.fixedAmount) || 0;
+      }
       return servicesWithPrices.map(function (service) {
         var price = parseAmount(service.amount);
         var lineId = parseInt(service.id, 10);
         var applicableDiscount = shouldApplyDiscount ? getApplicableDiscount(lineId) : null;
         var discountAmount = 0;
         if (applicableDiscount && price > 0) {
-          var fixed = Number(applicableDiscount.fixedAmount) || 0;
-          discountAmount = fixed > 0 ? Math.min(price, Math.round(fixed)) : Math.round(price * (Number(applicableDiscount.percent) || 0) / 100);
+          var _percent = Number(applicableDiscount.percent) || 0;
+          if (_percent > 0) {
+            discountAmount = Math.round(price * _percent / 100);
+          } else if (remainingFixedDiscount > 0) {
+            discountAmount = Math.min(price, remainingFixedDiscount);
+            remainingFixedDiscount -= discountAmount;
+          }
         }
         var adjustedPrice = Math.max(0, price - discountAmount);
-        var lineMaxUsage = getLineMaxCreditRials(lineId, adjustedPrice);
+        var lineMaxUsage = applyOccasionCredit ? adjustedPrice : getLineMaxCreditRials(lineId, adjustedPrice);
         var payFromCredit = remainingCredit > 0 && adjustedPrice > 0 ? Math.min(adjustedPrice, remainingCredit, lineMaxUsage) : 0;
         remainingCredit -= payFromCredit;
         return {
@@ -93600,7 +93651,12 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           shouldSendMessage: true,
           branchId: Number(selectedBranch == null ? undefined : selectedBranch.id) || 0,
           applyCredit: applyCredit,
-          applyDiscount: applyDiscount && canApplyDiscount,
+          applyDiscount: applyDiscount && canApplyDiscount
+        }, applyOccasionCredit && occasionCreditId > 0 ? {
+          discountId: occasionCreditId
+        } : applyDiscount && canApplyDiscount && occasionDiscountId > 0 ? {
+          discountId: occasionDiscountId
+        } : {}, {
           confirmNewCustomer: isNewCustomer
         }, isNewCustomer ? {
           customerName: trimmedName
@@ -93706,14 +93762,17 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
             }
             if (storedCustomer) {
               var customerDataJson = JSON.parse(storedCustomer);
-              var creditAmount = parseAmount(customerDataJson.credit);
-              setCredit(creditAmount);
+              var totalCredit = parseAmount(customerDataJson.credit);
+              var reservedOccasionCash = occasionCashAmountOf(customerDataJson.birthdayGift) + occasionCashAmountOf(customerDataJson.anniversaryGift);
+              var walletCredit = Math.max(0, totalCredit - reservedOccasionCash);
+              setCredit(walletCredit);
               setCustomerData(customerDataJson);
               if (customerDataJson.isNewCustomer) {
                 var existingName = customerDataJson.name && customerDataJson.name !== 'کاربر جدید' ? customerDataJson.name : '';
                 setNewCustomerName(existingName);
               }
-              if (creditAmount === 0) {
+              var hasOccasion = reservedOccasionCash > 0 || (customerDataJson.discounts || []).some(isOccasionDiscount) || customerDataJson.birthdayGift || customerDataJson.anniversaryGift;
+              if (walletCredit === 0 || hasOccasion) {
                 setSelectedOption('saveForLater');
               }
             }
@@ -93779,11 +93838,26 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       };
     }, [phoneNumber, selectedBranch == null ? undefined : selectedBranch.id, selectedServices, totalAfterDiscount, applyCredit, applyDiscount, customerData]);
     var formatDiscountValue = function formatDiscountValue(discount) {
-      var fixed = Number(discount.fixedAmount) || 0;
+      var percent = Number(discount.percent) || 0;
+      var fixed = percent > 0 ? 0 : Number(discount.fixedAmount) || 0;
+      if (percent > 0) {
+        return `${percent}%`;
+      }
       if (fixed > 0) {
         return `${(0, _$$_REQUIRE(_dependencyMap[13]).formatNumberWithSeparator)(fixed)} ${_$$_REQUIRE(_dependencyMap[13]).CURRENCY_LABEL}`;
       }
-      return `${discount.percent}%`;
+      return discount.typeLabel || 'تخفیف';
+    };
+    var formatOccasionGift = function formatOccasionGift(gift, kind) {
+      var _gift$itemDescription;
+      var title = kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+      if (gift.giftType === 'discount') {
+        return `${gift.discountPercent}٪ ${title}`;
+      }
+      if (gift.giftType === 'cash') {
+        return `${(0, _$$_REQUIRE(_dependencyMap[13]).formatNumberWithSeparator)(Number(gift.amountTomans) || 0)} ${_$$_REQUIRE(_dependencyMap[13]).CURRENCY_LABEL} ${title}`;
+      }
+      return (_gift$itemDescription = gift.itemDescription) != null && _gift$itemDescription.trim() ? `${title}: ${gift.itemDescription}` : title;
     };
     return /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.SafeAreaView, {
       style: styles.container,
@@ -93957,11 +94031,29 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
               })]
             }) : null;
           }()]
-        }), occasionDiscounts.length > 0 && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+        }), hasOccasionGift && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
           style: styles.sectionCard,
           children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
             style: styles.sectionTitle,
             children: "\u0647\u062F\u06CC\u0647 \u062A\u0648\u0644\u062F \u0648 \u0633\u0627\u0644\u06AF\u0631\u062F"
+          }), birthdayGift && birthdayGift.giftType !== 'discount' && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+            style: [styles.discountChip, styles.birthdayChip],
+            children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+              style: styles.discountAmountText,
+              children: formatOccasionGift(birthdayGift, 'birthday')
+            }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
+              style: styles.discountDateText,
+              children: ["\xB7 \u062A\u0627 ", birthdayGift.toDate]
+            })]
+          }), anniversaryGift && anniversaryGift.giftType !== 'discount' && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+            style: [styles.discountChip, styles.anniversaryChip],
+            children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+              style: styles.discountAmountText,
+              children: formatOccasionGift(anniversaryGift, 'anniversary')
+            }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
+              style: styles.discountDateText,
+              children: ["\xB7 \u062A\u0627 ", anniversaryGift.toDate]
+            })]
           }), occasionDiscounts.map(function (discount) {
             return /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
               style: [styles.discountChip, isBirthdayDiscount(discount) ? styles.birthdayChip : styles.anniversaryChip],
@@ -93979,7 +94071,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
                 children: ["\xB7 \u062A\u0627 ", discount.toDate]
               })]
             }, `occasion-${discount.id}`);
-          }), applyCredit && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+          }), applyCredit && occasionDiscounts.length > 0 && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
             style: styles.hintText,
             children: "\u0628\u0627 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0627\u0639\u062A\u0628\u0627\u0631\u060C \u0627\u06CC\u0646 \u062A\u062E\u0641\u06CC\u0641 \u0627\u0639\u0645\u0627\u0644 \u0646\u0645\u06CC\u200C\u0634\u0648\u062F."
           })]
@@ -131153,11 +131245,122 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
   /** Backend DiscountType: Birthday=4, Anniversary=5 */
   var isBirthdayDiscount = function isBirthdayDiscount(d) {
     var _d$typeLabel;
-    return Number(d.type) === 4 || ((_d$typeLabel = d.typeLabel) == null ? undefined : _d$typeLabel.includes('تولد'));
+    var type = Number(d.type);
+    return type === 4 || String(d.type).toLowerCase() === 'birthday' || ((_d$typeLabel = d.typeLabel) == null ? undefined : _d$typeLabel.includes('تولد'));
   };
   var isAnniversaryDiscount = function isAnniversaryDiscount(d) {
     var _d$typeLabel2;
-    return Number(d.type) === 5 || ((_d$typeLabel2 = d.typeLabel) == null ? undefined : _d$typeLabel2.includes('سالگرد'));
+    var type = Number(d.type);
+    return type === 5 || String(d.type).toLowerCase() === 'anniversary' || ((_d$typeLabel2 = d.typeLabel) == null ? undefined : _d$typeLabel2.includes('سالگرد'));
+  };
+  var isOccasionDiscount = function isOccasionDiscount(d) {
+    return isBirthdayDiscount(d) || isAnniversaryDiscount(d);
+  };
+  var discountPercentOf = function discountPercentOf(discount) {
+    return Number(discount.percent) || 0;
+  };
+  var discountFixedOf = function discountFixedOf(discount) {
+    return discountPercentOf(discount) > 0 ? 0 : Number(discount.fixedAmount) || 0;
+  };
+  var STACK_PALETTE = [{
+    bg: '#F5A623',
+    deep: '#C47C08'
+  }, {
+    bg: '#E53935',
+    deep: '#B71C1C'
+  }, {
+    bg: '#2C2C2E',
+    deep: '#1C1C1E'
+  }, {
+    bg: '#6C4DFF',
+    deep: '#4C33C9'
+  }, {
+    bg: '#2F8F5B',
+    deep: '#1F6B42'
+  }, {
+    bg: '#12998C',
+    deep: '#0B6F66'
+  }, {
+    bg: '#FF6B3D',
+    deep: '#C4471A'
+  }];
+  var STACK_CARD_HEIGHT = 156;
+  var STACK_PEEK = 58;
+  var STACK_OVERLAP = 98;
+  var giftToOccasionOption = function giftToOccasionOption(gift, kind) {
+    if (!gift) return null;
+    var type = kind === 'birthday' ? 4 : 5;
+    var typeLabel = kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+    var giftType = String(gift.giftType || '').toLowerCase();
+    var toDate = gift.toDate || '';
+    if (giftType === 'discount' || giftType !== 'cash' && giftType !== 'item' && Number(gift.discountPercent) > 0) {
+      var id = Number(gift.discountId) || (kind === 'birthday' ? -4 : -5);
+      if (Number(gift.discountPercent) <= 0 && !gift.discountId) return null;
+      return {
+        id: id,
+        percent: Number(gift.discountPercent) || 0,
+        type: type,
+        typeLabel: typeLabel,
+        toDate: toDate,
+        applyAs: 'discount',
+        kind: kind
+      };
+    }
+    if (giftType === 'cash' && Number(gift.amountTomans) > 0 && Number(gift.creditId) > 0) {
+      return {
+        id: Number(gift.creditId),
+        percent: 0,
+        fixedAmount: Number(gift.amountTomans) || 0,
+        type: type,
+        typeLabel: typeLabel,
+        toDate: toDate,
+        applyAs: 'credit',
+        kind: kind
+      };
+    }
+    if (giftType === 'item') {
+      var _gift$itemDescription;
+      return {
+        id: Number(gift.discountId) || (kind === 'birthday' ? -4 : -5),
+        percent: 0,
+        type: type,
+        typeLabel: (_gift$itemDescription = gift.itemDescription) != null && _gift$itemDescription.trim() ? `${typeLabel}: ${gift.itemDescription}` : typeLabel,
+        toDate: toDate,
+        applyAs: 'item',
+        kind: kind
+      };
+    }
+    return null;
+  };
+  var occasionCashAmountOf = function occasionCashAmountOf(gift) {
+    if (!gift || String(gift.giftType || '').toLowerCase() !== 'cash') return 0;
+    return Number(gift.amountTomans) || 0;
+  };
+  var buildOccasionOptions = function buildOccasionOptions(discounts, birthdayGift, anniversaryGift) {
+    var fromDiscounts = discounts.filter(isOccasionDiscount);
+    var pickForKind = function pickForKind(kind, fromGift) {
+      var fromList = fromDiscounts.filter(function (discount) {
+        return kind === 'birthday' ? isBirthdayDiscount(discount) : isAnniversaryDiscount(discount);
+      }).map(function (discount) {
+        return Object.assign({}, discount, {
+          applyAs: 'discount',
+          kind: kind
+        });
+      });
+      if (fromGift != null && fromGift.applyAs && fromGift.applyAs !== 'discount') {
+        return fromGift;
+      }
+      if (fromGift && Number(fromGift.id) > 0) {
+        return fromGift;
+      }
+      if (fromList[0]) {
+        return fromList[0];
+      }
+      return fromGift;
+    };
+    return [pickForKind('birthday', giftToOccasionOption(birthdayGift, 'birthday')), pickForKind('anniversary', giftToOccasionOption(anniversaryGift, 'anniversary'))].filter(function (option) {
+      return option != null;
+    });
   };
   var convertPersianToEnglish = function convertPersianToEnglish(persianNumber) {
     var persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -131169,7 +131372,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     return result;
   };
   function Checkout(_ref) {
-    var _discounts$find;
+    var _occasionOptions$find, _ref2, _ref3;
     var navigation = _ref.navigation;
     var _useSnackbarContext = (0, _$$_REQUIRE(_dependencyMap[10]).useSnackbarContext)(),
       showError = _useSnackbarContext.showError;
@@ -131215,6 +131418,14 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       _useState16 = (0, _slicedToArray2.default)(_useState15, 2),
       showMaxUsageModal = _useState16[0],
       setShowMaxUsageModal = _useState16[1];
+    var _useState17 = (0, _react.useState)(''),
+      _useState18 = (0, _slicedToArray2.default)(_useState17, 2),
+      newCustomerName = _useState18[0],
+      setNewCustomerName = _useState18[1];
+    var _useState19 = (0, _react.useState)(null),
+      _useState20 = (0, _slicedToArray2.default)(_useState19, 2),
+      frontCardKey = _useState20[0],
+      setFrontCardKey = _useState20[1];
     var englishPhoneNumber = convertPersianToEnglish(phoneNumber);
     var isValidPhone = englishPhoneNumber.length === 11 && englishPhoneNumber.startsWith('09');
     var branchId = Number(selectedBranch == null ? undefined : selectedBranch.id) || 0;
@@ -131227,21 +131438,37 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     var _useLinesDropdown = (0, _$$_REQUIRE(_dependencyMap[13]).useLinesDropdown)(branchId),
       linesData = _useLinesDropdown.data;
     var discounts = (customerData == null ? undefined : customerData.discounts) || [];
-    var hasDiscounts = discounts.length > 0;
-    var applyCredit = selectedOption === 'useCredit' && credit > 0;
-    var applyDiscount = selectedDiscountId != null && !applyCredit;
-    var selectedDiscount = (_discounts$find = discounts.find(function (d) {
+    var otherDiscounts = discounts.filter(function (d) {
+      return !isOccasionDiscount(d);
+    });
+    var occasionOptions = (0, _react.useMemo)(function () {
+      return buildOccasionOptions(discounts, customerData == null ? undefined : customerData.birthdayGift, customerData == null ? undefined : customerData.anniversaryGift);
+    }, [discounts, customerData == null ? undefined : customerData.birthdayGift, customerData == null ? undefined : customerData.anniversaryGift]);
+    var hasOccasionGift = occasionOptions.length > 0;
+    var selectedOccasion = (_occasionOptions$find = occasionOptions.find(function (option) {
+      return option.id === selectedDiscountId;
+    })) != null ? _occasionOptions$find : null;
+    var applyOccasionCredit = (selectedOccasion == null ? undefined : selectedOccasion.applyAs) === 'credit';
+    var occasionCreditAmount = applyOccasionCredit ? Number(selectedOccasion == null ? undefined : selectedOccasion.fixedAmount) || 0 : 0;
+    var applyWalletCredit = selectedOption === 'useCredit' && credit > 0 && !applyOccasionCredit;
+    var applyCredit = applyWalletCredit || applyOccasionCredit;
+    var applyDiscount = selectedDiscountId != null && !applyWalletCredit && !applyOccasionCredit && (selectedOccasion == null ? undefined : selectedOccasion.applyAs) !== 'item';
+    var selectedDiscount = (_ref2 = (_ref3 = (selectedOccasion == null ? undefined : selectedOccasion.applyAs) === 'discount' ? selectedOccasion : null) != null ? _ref3 : discounts.find(function (d) {
       return d.id === selectedDiscountId;
-    })) != null ? _discounts$find : null;
+    })) != null ? _ref2 : null;
     var customerReady = Boolean(customerData) && isValidPhone && !customerLoading;
     var pickBestDiscountId = function pickBestDiscountId(list) {
       var _sorted$0$id, _sorted$;
       if (!list.length) return null;
-      var sorted = (0, _toConsumableArray2.default)(list).sort(function (a, b) {
-        var aFixed = Number(a.fixedAmount) || 0;
-        var bFixed = Number(b.fixedAmount) || 0;
+      var occasion = list.filter(function (item) {
+        return 'applyAs' in item || isOccasionDiscount(item);
+      });
+      var pool = occasion.length ? occasion : list;
+      var sorted = (0, _toConsumableArray2.default)(pool).sort(function (a, b) {
+        var aFixed = discountFixedOf(a);
+        var bFixed = discountFixedOf(b);
         if (aFixed !== bFixed) return bFixed - aFixed;
-        return Number(b.percent) - Number(a.percent);
+        return discountPercentOf(b) - discountPercentOf(a);
       });
       return (_sorted$0$id = (_sorted$ = sorted[0]) == null ? undefined : _sorted$.id) != null ? _sorted$0$id : null;
     };
@@ -131252,20 +131479,25 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     }, [englishPhoneNumber, isValidPhone, refetch]);
     (0, _react.useEffect)(function () {
       var syncCustomer = /*#__PURE__*/function () {
-        var _ref2 = (0, _asyncToGenerator2.default)(function* () {
+        var _ref4 = (0, _asyncToGenerator2.default)(function* () {
           if (!isValidPhone) {
             setCustomerData(null);
             setCredit(0);
             setSelectedDiscountId(null);
+            setNewCustomerName('');
             return;
           }
           if ((customerResponse == null ? undefined : customerResponse.Code) === 200 && customerResponse != null && customerResponse.Data) {
             var data = customerResponse.Data;
-            var creditAmount = parseAmount(data.credit);
+            var totalCredit = parseAmount(data.credit);
+            var reservedOccasionCash = occasionCashAmountOf(data.birthdayGift) + occasionCashAmountOf(data.anniversaryGift);
+            var walletCredit = Math.max(0, totalCredit - reservedOccasionCash);
+            var options = buildOccasionOptions(data.discounts || [], data.birthdayGift, data.anniversaryGift);
+            var bestId = pickBestDiscountId(options.length ? options : data.discounts || []);
             setCustomerData(data);
-            setCredit(creditAmount);
-            setSelectedOption(creditAmount > 0 ? 'useCredit' : 'saveForLater');
-            setSelectedDiscountId(pickBestDiscountId(data.discounts || []));
+            setCredit(walletCredit);
+            setSelectedDiscountId(bestId);
+            setSelectedOption(options.length === 0 && walletCredit > 0 ? 'useCredit' : 'saveForLater');
             try {
               yield _asyncStorage.default.setItem('customerData', JSON.stringify(data));
               yield _asyncStorage.default.setItem('phoneNumber', phoneNumber);
@@ -131298,7 +131530,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           }
         });
         return function syncCustomer() {
-          return _ref2.apply(this, arguments);
+          return _ref4.apply(this, arguments);
         };
       }();
       syncCustomer();
@@ -131342,19 +131574,26 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     };
     var linePreviews = (0, _react.useMemo)(function () {
       var servicesWithPrices = getServicesWithPrices();
-      var remainingCredit = applyCredit ? credit : 0;
+      var remainingCredit = applyOccasionCredit ? occasionCreditAmount : applyWalletCredit ? credit : 0;
       var shouldApplyDiscount = applyDiscount;
+      var remainingFixedDiscount = selectedDiscount ? discountFixedOf(selectedDiscount) : 0;
       return servicesWithPrices.map(function (service) {
         var price = parseAmount(service.amount);
         var lineId = parseInt(service.id, 10);
         var applicableDiscount = shouldApplyDiscount ? getApplicableDiscount(lineId) : null;
         var discountAmount = 0;
         if (applicableDiscount && price > 0) {
-          var fixed = Number(applicableDiscount.fixedAmount) || 0;
-          discountAmount = fixed > 0 ? Math.min(price, Math.round(fixed)) : Math.round(price * (Number(applicableDiscount.percent) || 0) / 100);
+          var percent = discountPercentOf(applicableDiscount);
+          var fixed = discountFixedOf(applicableDiscount);
+          if (percent > 0) {
+            discountAmount = Math.round(price * percent / 100);
+          } else if (remainingFixedDiscount > 0) {
+            discountAmount = Math.min(price, remainingFixedDiscount);
+            remainingFixedDiscount -= discountAmount;
+          }
         }
         var adjustedPrice = Math.max(0, price - discountAmount);
-        var lineMaxUsage = getLineMaxCreditRials(lineId, adjustedPrice);
+        var lineMaxUsage = applyOccasionCredit ? adjustedPrice : getLineMaxCreditRials(lineId, adjustedPrice);
         var payFromCredit = remainingCredit > 0 && adjustedPrice > 0 ? Math.min(adjustedPrice, remainingCredit, lineMaxUsage) : 0;
         remainingCredit -= payFromCredit;
         return {
@@ -131367,7 +131606,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           cashPayment: Math.max(0, adjustedPrice - payFromCredit)
         };
       });
-    }, [selectedServices, applyCredit, credit, applyDiscount, selectedDiscountId, discounts, linesData]);
+    }, [selectedServices, applyWalletCredit, applyOccasionCredit, occasionCreditAmount, credit, applyDiscount, selectedDiscountId, discounts, linesData]);
     var totalAmount = linePreviews.reduce(function (sum, p) {
       return sum + p.price;
     }, 0) || getTotalAmount();
@@ -131402,7 +131641,8 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
         maxUsagePerLine: maxUsagePerLine
       };
     }, [selectedServices, linesData]);
-    var usageCeiling = Math.min(credit, maxCreditUsage.totalMaxUsage || credit);
+    var spendableCredit = applyOccasionCredit ? occasionCreditAmount : credit;
+    var usageCeiling = Math.min(spendableCredit, maxCreditUsage.totalMaxUsage || spendableCredit);
     (0, _react.useEffect)(function () {
       if (!isValidPhone || !branchId || linePreviews.length === 0) {
         setSharePreview([]);
@@ -131440,10 +131680,128 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       };
     }, [isValidPhone, englishPhoneNumber, branchId, totalAfterDiscount, applyCredit, applyDiscount, customerData]);
     var formatDiscountValue = function formatDiscountValue(discount) {
-      var fixed = Number(discount.fixedAmount) || 0;
+      var percent = discountPercentOf(discount);
+      var fixed = discountFixedOf(discount);
+      if (percent > 0) return `${percent}%`;
       if (fixed > 0) return `${(0, _$$_REQUIRE(_dependencyMap[14]).formatNumberWithSeparator)(fixed)} ${_$$_REQUIRE(_dependencyMap[14]).CURRENCY_LABEL}`;
-      return `${discount.percent}%`;
+      return discount.typeLabel || 'هدیه';
     };
+    var formatOccasionOption = function formatOccasionOption(option) {
+      var _option$typeLabel;
+      if (option.applyAs === 'discount') {
+        return formatDiscountValue(option);
+      }
+      if (option.applyAs === 'credit') {
+        return `${(0, _$$_REQUIRE(_dependencyMap[14]).formatNumberWithSeparator)(Number(option.fixedAmount) || 0)} ${_$$_REQUIRE(_dependencyMap[14]).CURRENCY_LABEL}`;
+      }
+      return ((_option$typeLabel = option.typeLabel) == null ? undefined : _option$typeLabel.replace(/^هدیه تولد:\s*/, '').replace(/^هدیه سالگرد ازدواج:\s*/, '')) || option.typeLabel;
+    };
+    var selectOccasionOption = function selectOccasionOption(option) {
+      setSelectedDiscountId(option.id);
+      setSelectedOption('saveForLater');
+    };
+    var benefitCards = (0, _react.useMemo)(function () {
+      var cards = [];
+      if (credit > 0) {
+        cards.push({
+          key: 'credit',
+          kind: 'credit',
+          label: 'اعتبار قابل استفاده',
+          amount: `${(0, _$$_REQUIRE(_dependencyMap[14]).formatNumberWithSeparator)(credit)} ${_$$_REQUIRE(_dependencyMap[14]).CURRENCY_LABEL}`,
+          metaLabel: 'سقف استفاده',
+          metaValue: `${(0, _$$_REQUIRE(_dependencyMap[14]).formatNumberWithSeparator)(Math.min(credit, maxCreditUsage.totalMaxUsage || credit))} ${_$$_REQUIRE(_dependencyMap[14]).CURRENCY_LABEL}`,
+          bg: STACK_PALETTE[0].bg,
+          deep: STACK_PALETTE[0].deep,
+          selected: applyWalletCredit,
+          onPress: function onPress() {
+            var enable = !applyWalletCredit;
+            setSelectedOption(enable ? 'useCredit' : 'saveForLater');
+            if (enable) setSelectedDiscountId(null);
+          },
+          onAction: function onAction() {
+            return setShowMaxUsageModal(true);
+          },
+          actionLabel: 'جزئیات'
+        });
+      }
+      occasionOptions.forEach(function (option) {
+        var title = option.kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+        cards.push({
+          key: `occasion-${option.kind}-${option.id}`,
+          kind: 'occasion',
+          label: title,
+          amount: formatOccasionOption(option),
+          metaLabel: option.toDate ? 'مهلت استفاده' : title,
+          metaValue: option.toDate ? `تا ${option.toDate}` : undefined,
+          bg: STACK_PALETTE[cards.length % STACK_PALETTE.length].bg,
+          deep: STACK_PALETTE[cards.length % STACK_PALETTE.length].deep,
+          selected: selectedDiscountId === option.id,
+          onPress: function onPress() {
+            return selectOccasionOption(option);
+          },
+          actionLabel: selectedDiscountId === option.id ? 'اعمال شد' : 'اعمال'
+        });
+      });
+      otherDiscounts.forEach(function (discount) {
+        var theme = STACK_PALETTE[cards.length % STACK_PALETTE.length];
+        var selected = selectedDiscountId === discount.id && !applyWalletCredit;
+        var metaParts = [discount.lineTitle, discount.toDate ? `تا ${discount.toDate}` : ''].filter(Boolean);
+        cards.push({
+          key: `discount-${discount.id}`,
+          kind: 'discount',
+          label: discount.typeLabel || 'تخفیف',
+          amount: formatDiscountValue(discount),
+          metaLabel: metaParts[0] || 'تخفیف فعال',
+          metaValue: metaParts[1],
+          bg: theme.bg,
+          deep: theme.deep,
+          selected: selected,
+          onPress: function onPress() {
+            setSelectedDiscountId(discount.id);
+            setSelectedOption('saveForLater');
+          },
+          actionLabel: selected ? 'اعمال شد' : 'اعمال'
+        });
+      });
+      return cards;
+    }, [credit, maxCreditUsage.totalMaxUsage, applyWalletCredit, occasionOptions, otherDiscounts, selectedDiscountId]);
+    (0, _react.useEffect)(function () {
+      if (!benefitCards.length) {
+        setFrontCardKey(null);
+        return;
+      }
+      if (frontCardKey && benefitCards.some(function (card) {
+        return card.key === frontCardKey;
+      })) {
+        return;
+      }
+      var selected = benefitCards.find(function (card) {
+        return card.selected;
+      });
+      setFrontCardKey((selected == null ? undefined : selected.key) || benefitCards[0].key);
+    }, [benefitCards, frontCardKey]);
+    var stackedCards = (0, _react.useMemo)(function () {
+      var _benefitCards$find;
+      if (!benefitCards.length) {
+        return {
+          behind: [],
+          front: null
+        };
+      }
+      var activeKey = frontCardKey && benefitCards.some(function (card) {
+        return card.key === frontCardKey;
+      }) ? frontCardKey : ((_benefitCards$find = benefitCards.find(function (card) {
+        return card.selected;
+      })) == null ? undefined : _benefitCards$find.key) || benefitCards[0].key;
+      return {
+        behind: benefitCards.filter(function (card) {
+          return card.key !== activeKey;
+        }),
+        front: benefitCards.find(function (card) {
+          return card.key === activeKey;
+        }) || benefitCards[0]
+      };
+    }, [benefitCards, frontCardKey]);
     var prepareTransactionData = function prepareTransactionData() {
       if (!isValidPhone) {
         showError('شماره تلفن معتبر نیست');
@@ -131454,6 +131812,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
         return null;
       }
       var isNewCustomer = Boolean(customerData == null ? undefined : customerData.isNewCustomer);
+      var trimmedName = newCustomerName.trim();
       return Object.assign({
         cashBackDto: linePreviews.map(function (preview) {
           return {
@@ -131471,11 +131830,13 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
         branchId: branchId,
         applyCredit: applyCredit,
         applyDiscount: applyDiscount
-      }, applyDiscount && selectedDiscountId != null ? {
+      }, selectedDiscountId != null && selectedDiscountId > 0 ? {
         discountId: selectedDiscountId
       } : {}, {
         confirmNewCustomer: isNewCustomer
-      });
+      }, isNewCustomer ? {
+        customerName: trimmedName || 'مشتری جدید'
+      } : {});
     };
     var goToSuccess = function goToSuccess(transactionData) {
       var paymentMethod = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'cash';
@@ -131555,45 +131916,75 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
             style: styles.loadingText,
             children: "\u062F\u0631 \u062D\u0627\u0644 \u062F\u0631\u06CC\u0627\u0641\u062A \u0627\u0637\u0644\u0627\u0639\u0627\u062A \u0645\u0634\u062A\u0631\u06CC..."
           })]
-        }), customerReady && customerData && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-          style: styles.creditHeroCard,
-          children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-            style: styles.creditHeroTop,
-            children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-              style: styles.creditHeroLabelRow,
-              children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_MoneyIcon.default, {
-                width: 20,
-                height: 20
-              }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-                style: styles.creditHeroLabel,
-                children: "\u0627\u0639\u062A\u0628\u0627\u0631 \u0642\u0627\u0628\u0644 \u0627\u0633\u062A\u0641\u0627\u062F\u0647"
-              })]
-            }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
-              style: styles.creditHeroAmount,
-              children: [(0, _$$_REQUIRE(_dependencyMap[14]).formatNumberWithSeparator)(credit), " ", _$$_REQUIRE(_dependencyMap[14]).CURRENCY_LABEL]
-            })]
-          }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-            style: styles.creditHeroBottom,
-            children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-              style: styles.creditCeilingBlock,
-              children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-                style: styles.creditCeilingLabel,
-                children: "\u0633\u0642\u0641 \u0627\u0633\u062A\u0641\u0627\u062F\u0647"
-              }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
-                style: styles.creditCeilingValue,
-                children: [(0, _$$_REQUIRE(_dependencyMap[14]).formatNumberWithSeparator)(usageCeiling), " ", _$$_REQUIRE(_dependencyMap[14]).CURRENCY_LABEL]
-              })]
-            }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.TouchableOpacity, {
-              style: styles.creditDetailsBtn,
+        }), customerReady && customerData && benefitCards.length > 0 && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+          style: styles.stack,
+          children: [[].concat((0, _toConsumableArray2.default)(stackedCards.behind), (0, _toConsumableArray2.default)(stackedCards.front ? [stackedCards.front] : [])).map(function (card, index) {
+            var _stackedCards$front;
+            var isFront = card.key === ((_stackedCards$front = stackedCards.front) == null ? undefined : _stackedCards$front.key);
+            return /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.TouchableOpacity, {
+              activeOpacity: 0.92,
               onPress: function onPress() {
-                return setShowMaxUsageModal(true);
+                setFrontCardKey(card.key);
+                card.onPress();
               },
-              activeOpacity: 0.85,
-              children: /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-                style: styles.creditDetailsBtnText,
-                children: "\u062C\u0632\u0626\u06CC\u0627\u062A"
-              })
-            })]
+              style: [styles.stackCard, index === 0 ? styles.stackCardFirst : null, {
+                backgroundColor: card.bg,
+                zIndex: index + 1
+              }, isFront && styles.stackCardFront],
+              children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+                style: styles.stackHeader,
+                children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+                  style: styles.stackTitleRow,
+                  children: [card.kind === 'credit' ? /*#__PURE__*/(0, _jsxRuntime.jsx)(_MoneyIcon.default, {
+                    width: 18,
+                    height: 18
+                  }) : /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
+                    style: styles.stackIconDot
+                  }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+                    style: styles.stackTitle,
+                    numberOfLines: 1,
+                    children: card.label
+                  })]
+                }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
+                  style: styles.stackAmountPill,
+                  children: /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+                    style: styles.stackAmountText,
+                    numberOfLines: 1,
+                    children: card.amount
+                  })
+                })]
+              }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+                style: styles.stackBody,
+                children: [!!card.metaValue ? /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
+                  style: styles.stackBodyMeta,
+                  children: [card.metaLabel, " \xB7 ", card.metaValue]
+                }) : /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+                  style: styles.stackBodyMeta,
+                  children: card.metaLabel
+                }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.TouchableOpacity, {
+                  style: styles.stackActionBtn,
+                  onPress: card.onAction || card.onPress,
+                  activeOpacity: 0.85,
+                  children: /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+                    style: styles.stackActionText,
+                    children: card.actionLabel
+                  })
+                })]
+              })]
+            }, card.key);
+          }), (hasOccasionGift || otherDiscounts.length > 0) && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.TouchableOpacity, {
+            style: styles.skipLink,
+            onPress: function onPress() {
+              setSelectedDiscountId(null);
+              if (!applyWalletCredit) {
+                setSelectedOption('saveForLater');
+              }
+            },
+            activeOpacity: 0.8,
+            children: /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
+              style: styles.skipLinkText,
+              children: "\u0627\u0639\u0645\u0627\u0644 \u0646\u0634\u0648\u062F"
+            })
           })]
         }), customerReady && customerData && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, {
           children: [(customerData.isNewCustomer || customerData.isFirstBuyEligible || !!customerData.subscriptionCode) && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
@@ -131601,6 +131992,15 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
             children: [(customerData.isNewCustomer || customerData.isFirstBuyEligible) && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
               style: styles.newCustomerText,
               children: customerData.isNewCustomer ? 'مشتری جدید — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.' : 'اولین خرید این مشتری — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'
+            }), customerData.isNewCustomer && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.TextInput, {
+              style: [styles.phoneInput, {
+                marginTop: 8
+              }],
+              value: newCustomerName,
+              onChangeText: setNewCustomerName,
+              placeholder: "\u0646\u0627\u0645 \u0645\u0634\u062A\u0631\u06CC (\u0627\u062E\u062A\u06CC\u0627\u0631\u06CC)",
+              placeholderTextColor: "#999",
+              textAlign: "right"
             }), !!customerData.subscriptionCode && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
               style: styles.row,
               children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
@@ -131610,80 +132010,6 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
                 style: styles.rowLabel,
                 children: "\u0627\u0634\u062A\u0631\u0627\u06A9"
               })]
-            })]
-          }), hasDiscounts && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-            style: styles.card,
-            children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-              style: styles.cardTitle,
-              children: "\u0627\u0646\u062A\u062E\u0627\u0628 \u062A\u062E\u0641\u06CC\u0641 \u06CC\u0627 \u0647\u062F\u06CC\u0647"
-            }), applyCredit && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-              style: styles.hint,
-              children: "\u0628\u0627 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0627\u0639\u062A\u0628\u0627\u0631\u060C \u062A\u062E\u0641\u06CC\u0641 \u0627\u0639\u0645\u0627\u0644 \u0646\u0645\u06CC\u200C\u0634\u0648\u062F."
-            }), discounts.map(function (discount) {
-              var selected = selectedDiscountId === discount.id && !applyCredit;
-              var disabled = applyCredit;
-              var title = isBirthdayDiscount(discount) ? 'هدیه تولد' : isAnniversaryDiscount(discount) ? 'هدیه سالگرد ازدواج' : discount.typeLabel || 'تخفیف';
-              return /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.TouchableOpacity, {
-                style: [styles.discountOption, isBirthdayDiscount(discount) && styles.birthdayChip, isAnniversaryDiscount(discount) && styles.anniversaryChip, selected && styles.discountOptionSelected, disabled && styles.discountOptionDisabled],
-                onPress: function onPress() {
-                  if (disabled) return;
-                  setSelectedDiscountId(discount.id);
-                },
-                activeOpacity: disabled ? 1 : 0.85,
-                children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-                  style: styles.discountOptionBody,
-                  children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-                    style: styles.discountStrong,
-                    children: formatDiscountValue(discount)
-                  }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
-                    style: styles.discountMeta,
-                    children: [" ", title]
-                  }), !!discount.lineTitle && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
-                    style: styles.discountMeta,
-                    children: [" \xB7 ", discount.lineTitle]
-                  }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.Text, {
-                    style: styles.discountDate,
-                    children: [" \xB7 \u062A\u0627 ", discount.toDate]
-                  })]
-                }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
-                  style: [styles.discountRadio, selected && styles.discountRadioActive],
-                  children: selected && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
-                    style: styles.discountRadioDot
-                  })
-                })]
-              }, discount.id);
-            }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.TouchableOpacity, {
-              style: [styles.discountOption, styles.discountNoneOption, selectedDiscountId == null && !applyCredit && styles.discountOptionSelected, applyCredit && styles.discountOptionDisabled],
-              onPress: function onPress() {
-                if (applyCredit) return;
-                setSelectedDiscountId(null);
-              },
-              activeOpacity: applyCredit ? 1 : 0.85,
-              children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-                style: styles.discountNoneText,
-                children: "\u0628\u062F\u0648\u0646 \u062A\u062E\u0641\u06CC\u0641"
-              }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
-                style: [styles.discountRadio, selectedDiscountId == null && !applyCredit && styles.discountRadioActive],
-                children: selectedDiscountId == null && !applyCredit && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
-                  style: styles.discountRadioDot
-                })
-              })]
-            })]
-          }), credit > 0 && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
-            style: styles.switchRow,
-            children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Switch, {
-              value: selectedOption === 'useCredit',
-              onValueChange: function onValueChange(enabled) {
-                return setSelectedOption(enabled ? 'useCredit' : 'saveForLater');
-              },
-              trackColor: {
-                false: '#CCCCCC',
-                true: '#81C784'
-              },
-              thumbColor: selectedOption === 'useCredit' ? '#4CAF50' : '#f4f3f4'
-            }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-              style: styles.optionText,
-              children: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0627\u0639\u062A\u0628\u0627\u0631"
             })]
           }), /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
             style: styles.shareCard,
@@ -131721,6 +132047,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           })]
         })]
       }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[17]).FooterBar, {
+        compact: true,
         top: /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
           style: styles.amountBar,
           children: [/*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
@@ -131764,17 +132091,21 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           })]
         }),
         children: !customerReady ? /*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[17]).FooterButton, {
+          compact: true,
           label: "\u0634\u0645\u0627\u0631\u0647 \u0645\u0634\u062A\u0631\u06CC \u0631\u0627 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F",
           disabled: true
         }) : finalAmountToPay === 0 ? /*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[17]).FooterButton, {
+          compact: true,
           label: "\u062B\u0628\u062A",
           onPress: handleSubmit
         }) : /*#__PURE__*/(0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, {
           children: [/*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[17]).FooterButton, {
+            compact: true,
             label: "\u06A9\u0627\u0631\u062A\u200C\u062E\u0648\u0627\u0646",
             flex: 1.35,
             onPress: handleCardPayment
           }), /*#__PURE__*/(0, _jsxRuntime.jsx)(_$$_REQUIRE(_dependencyMap[17]).FooterButton, {
+            compact: true,
             label: "\u0646\u0642\u062F\u06CC",
             variant: "secondary",
             onPress: handleCashPayment
@@ -131848,9 +132179,9 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       backgroundColor: _$$_REQUIRE(_dependencyMap[18]).colors.bg
     },
     scrollContent: {
-      paddingHorizontal: 18,
-      paddingTop: 16,
-      paddingBottom: 24
+      paddingHorizontal: 12,
+      paddingTop: 8,
+      paddingBottom: 16
     },
     summaryChip: {
       backgroundColor: _$$_REQUIRE(_dependencyMap[18]).colors.orangeTint,
@@ -131874,19 +132205,19 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       textAlign: 'right'
     },
     sectionLabel: {
-      fontSize: 12.5,
+      fontSize: 11,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.ink,
       textAlign: 'right',
-      marginBottom: 8
+      marginBottom: 4
     },
     phoneInput: {
       borderWidth: 1,
       borderColor: _$$_REQUIRE(_dependencyMap[18]).colors.line,
-      borderRadius: 14,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 17,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      fontSize: 15,
       backgroundColor: _$$_REQUIRE(_dependencyMap[18]).colors.surface,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.ink
@@ -131896,21 +132227,122 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
       borderWidth: 1.5
     },
     errorMessage: {
-      fontSize: 11,
+      fontSize: 10,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.danger,
       textAlign: 'right',
-      marginTop: 6,
+      marginTop: 4,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.regular
     },
     loadingBox: {
-      marginTop: 16,
+      marginTop: 8,
       alignItems: 'center',
-      gap: 8
+      gap: 4
     },
     loadingText: {
       fontSize: 12,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.inkSoft,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.regular
+    },
+    stack: {
+      marginTop: 12
+    },
+    stackCard: {
+      height: STACK_CARD_HEIGHT,
+      borderRadius: 20,
+      overflow: 'hidden',
+      marginTop: -98,
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: {
+        width: 0,
+        height: 4
+      },
+      elevation: 5
+    },
+    stackCardFirst: {
+      marginTop: 0
+    },
+    stackCardFront: {
+      elevation: 12,
+      shadowOpacity: 0.3
+    },
+    stackHeader: {
+      height: STACK_PEEK,
+      paddingHorizontal: 14,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10
+    },
+    stackTitleRow: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1
+    },
+    stackIconDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: 'rgba(255,255,255,0.9)'
+    },
+    stackTitle: {
+      flex: 1,
+      fontSize: 13,
+      fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
+      color: '#FFFFFF',
+      textAlign: 'right'
+    },
+    stackAmountPill: {
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      maxWidth: '46%'
+    },
+    stackAmountText: {
+      fontSize: 11.5,
+      fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
+      color: '#FFFFFF',
+      textAlign: 'left'
+    },
+    stackBody: {
+      flex: 1,
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+      paddingTop: 4,
+      justifyContent: 'space-between'
+    },
+    stackBodyMeta: {
+      fontSize: 11,
+      fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.regular,
+      color: 'rgba(255,255,255,0.88)',
+      textAlign: 'right',
+      marginBottom: 12
+    },
+    stackActionBtn: {
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      borderRadius: 14,
+      paddingVertical: 11,
+      alignItems: 'center'
+    },
+    stackActionText: {
+      fontSize: 13,
+      fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
+      color: '#FFFFFF'
+    },
+    skipLink: {
+      alignSelf: 'flex-end',
+      marginTop: 10,
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+      zIndex: 50
+    },
+    skipLinkText: {
+      fontSize: 12,
+      fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.medium,
+      color: _$$_REQUIRE(_dependencyMap[18]).colors.inkSoft
     },
     creditHeroCard: {
       marginTop: 12,
@@ -132177,41 +132609,42 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     },
     amountBar: {
       backgroundColor: _$$_REQUIRE(_dependencyMap[18]).colors.bg,
-      borderRadius: 16,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: _$$_REQUIRE(_dependencyMap[18]).colors.line,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      gap: 6
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      gap: 2
     },
     amountRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      minHeight: 18
     },
     amountRowFinal: {
-      marginTop: 4,
-      paddingTop: 10,
+      marginTop: 2,
+      paddingTop: 5,
       borderTopWidth: 1,
       borderTopColor: _$$_REQUIRE(_dependencyMap[18]).colors.line
     },
     amountLabel: {
-      fontSize: 12.5,
+      fontSize: 11,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.medium,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.inkSoft
     },
     amountLabelBold: {
-      fontSize: 13,
+      fontSize: 12,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.ink
     },
     amountValue: {
-      fontSize: 13,
+      fontSize: 11.5,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.ink
     },
     amountValueBold: {
-      fontSize: 16,
+      fontSize: 13.5,
       fontFamily: _$$_REQUIRE(_dependencyMap[18]).fonts.bold,
       color: _$$_REQUIRE(_dependencyMap[18]).colors.ink
     },

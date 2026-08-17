@@ -196,7 +196,7 @@ function ServiceContent({
 
             <ScrollView
                 style={styles.scroll}
-                contentContainerStyle={[styles.scrollContent, { paddingBottom: 28 }]}
+                contentContainerStyle={styles.scrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
@@ -245,6 +245,7 @@ function ServiceContent({
             </ScrollView>
 
             <FooterBar
+                compact
                 top={
                     selectedServices.length > 0 ? (
                         <View style={styles.totalBar}>
@@ -257,6 +258,7 @@ function ServiceContent({
                 }
             >
                 <FooterButton
+                    compact
                     label="ادامه"
                     disabled={!canContinue}
                     onPress={() => {
@@ -291,21 +293,22 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 18,
-        paddingTop: 18,
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: 16,
     },
     instructionText: {
-        fontSize: 13.5,
+        fontSize: 12,
         color: colors.ink,
         textAlign: 'right',
-        marginBottom: 14,
+        marginBottom: 8,
         fontFamily: fonts.bold,
     },
     serviceOption: {
-        paddingVertical: 14,
-        paddingHorizontal: 14,
-        marginBottom: 10,
-        borderRadius: 18,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        marginBottom: 6,
+        borderRadius: 12,
         borderWidth: 1,
         backgroundColor: colors.surface,
     },
@@ -313,6 +316,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',
         alignItems: 'center',
+        minHeight: 28,
     },
     serviceOptionUnselected: {
         borderColor: colors.line,
@@ -323,21 +327,21 @@ const styles = StyleSheet.create({
     },
     serviceOptionText: {
         fontFamily: fonts.bold,
-        fontSize: 14,
+        fontSize: 13,
         color: colors.ink,
         textAlign: 'right',
         flex: 1,
     },
     checkCircle: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
         borderWidth: 1.5,
         borderColor: colors.line,
         backgroundColor: colors.bg,
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 10,
+        marginLeft: 8,
     },
     checkCircleOn: {
         backgroundColor: colors.orange,
@@ -345,58 +349,58 @@ const styles = StyleSheet.create({
     },
     checkmarkText: {
         color: 'white',
-        fontSize: 12,
+        fontSize: 11,
         fontFamily: fonts.bold,
     },
     amountRow: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.surface,
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderWidth: 1,
         borderColor: colors.line,
-        marginTop: 12,
+        marginTop: 6,
     },
     currencyTag: {
         backgroundColor: colors.orangeTint,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 14,
-        marginRight: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+        marginRight: 8,
     },
     currencyTagText: {
         color: colors.orangeDeep,
-        fontSize: 11,
+        fontSize: 10,
         fontFamily: fonts.bold,
     },
     amountInput: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 14,
         fontFamily: fonts.bold,
         color: colors.ink,
         textAlign: 'left',
-        paddingVertical: 4,
+        paddingVertical: 2,
     },
     totalBar: {
         backgroundColor: colors.bg,
-        borderRadius: 16,
+        borderRadius: 10,
         borderWidth: 1,
         borderColor: colors.line,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     totalBarLabel: {
-        fontSize: 12.5,
+        fontSize: 11,
         fontFamily: fonts.medium,
         color: colors.inkSoft,
     },
     totalBarValue: {
-        fontSize: 16,
+        fontSize: 13.5,
         fontFamily: fonts.bold,
         color: colors.ink,
     },

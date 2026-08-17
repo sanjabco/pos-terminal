@@ -18,6 +18,7 @@ type FooterButtonProps = {
   variant?: 'primary' | 'secondary' | 'ghost';
   /** Relative width in a multi-button row (default 1) */
   flex?: number;
+  compact?: boolean;
   style?: ViewStyle;
 };
 
@@ -28,6 +29,7 @@ export function FooterButton({
   loading,
   variant = 'primary',
   flex = 1,
+  compact,
   style,
 }: FooterButtonProps) {
   const isDisabled = disabled || loading;
@@ -42,6 +44,7 @@ export function FooterButton({
       activeOpacity={0.88}
       style={[
         styles.btn,
+        compact && styles.btnCompact,
         { flex },
         variant === 'primary' && styles.btnPrimary,
         variant === 'secondary' && styles.btnSecondary,
@@ -84,15 +87,22 @@ export function FooterButton({
 type FooterBarProps = {
   children: React.ReactNode;
   top?: React.ReactNode;
+  compact?: boolean;
 };
 
 /** Sticky bottom bar with safe-area padding — customer-app style */
-export function FooterBar({ children, top }: FooterBarProps) {
+export function FooterBar({ children, top, compact }: FooterBarProps) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-      {top ? <View style={styles.topSlot}>{top}</View> : null}
-      <View style={styles.row}>{children}</View>
+    <View
+      style={[
+        styles.bar,
+        compact && styles.barCompact,
+        { paddingBottom: Math.max(insets.bottom, compact ? 8 : 14) },
+      ]}
+    >
+      {top ? <View style={[styles.topSlot, compact && styles.topSlotCompact]}>{top}</View> : null}
+      <View style={[styles.row, compact && styles.rowCompact]}>{children}</View>
     </View>
   );
 }
@@ -110,13 +120,23 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  barCompact: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
   topSlot: {
     marginBottom: 12,
+  },
+  topSlotCompact: {
+    marginBottom: 6,
   },
   row: {
     flexDirection: 'row-reverse',
     alignItems: 'stretch',
     gap: 10,
+  },
+  rowCompact: {
+    gap: 8,
   },
   btn: {
     minHeight: 54,
@@ -124,6 +144,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
+  },
+  btnCompact: {
+    minHeight: 42,
+    borderRadius: 12,
+    paddingHorizontal: 12,
   },
   btnPrimary: {
     backgroundColor: colors.orange,

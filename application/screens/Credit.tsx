@@ -28,7 +28,7 @@ import { useLinesDropdown, fetchShareDiscountPreview } from '../hooks/useApi';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { useAuth } from '../hooks/useAuth';
 import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
-import type { Customer, CustomerActiveDiscount, ShareDiscountPreviewItem } from '../services/api';
+import type { Customer, CustomerActiveDiscount, OccasionGift, ShareDiscountPreviewItem } from '../services/api';
 
 const { height } = Dimensions.get('window');
 
@@ -60,14 +60,23 @@ const parseAmount = (value: unknown): number => {
 };
 
 /** Backend DiscountType: Birthday=4, Anniversary=5 */
-const isBirthdayDiscount = (d: CustomerActiveDiscount) =>
-  Number(d.type) === 4 || d.typeLabel?.includes('تولد');
+const isBirthdayDiscount = (d: CustomerActiveDiscount) => {
+  const type = Number(d.type);
+  return type === 4 || String(d.type).toLowerCase() === 'birthday' || d.typeLabel?.includes('تولد');
+};
 
-const isAnniversaryDiscount = (d: CustomerActiveDiscount) =>
-  Number(d.type) === 5 || d.typeLabel?.includes('سالگرد');
+const isAnniversaryDiscount = (d: CustomerActiveDiscount) => {
+  const type = Number(d.type);
+  return type === 5 || String(d.type).toLowerCase() === 'anniversary' || d.typeLabel?.includes('سالگرد');
+};
 
 const isOccasionDiscount = (d: CustomerActiveDiscount) =>
   isBirthdayDiscount(d) || isAnniversaryDiscount(d);
+
+const occasionCashAmountOf = (gift?: OccasionGift | null): number => {
+  if (!gift || String(gift.giftType || '').toLowerCase() !== 'cash') return 0;
+  return Number(gift.amountTomans) || 0;
+};
 
 function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const { showError } = useSnackbarContext();
@@ -94,9 +103,29 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   const discounts = customerData?.discounts || [];
   const occasionDiscounts = discounts.filter(isOccasionDiscount);
   const otherDiscounts = discounts.filter((d) => !isOccasionDiscount(d));
+  const birthdayGift = customerData?.birthdayGift;
+  const anniversaryGift = customerData?.anniversaryGift;
+  const hasOccasionGift =
+    occasionDiscounts.length > 0
+    || (birthdayGift && birthdayGift.giftType !== 'discount')
+    || (anniversaryGift && anniversaryGift.giftType !== 'discount');
   const hasDiscounts = discounts.length > 0;
-  const applyCredit = selectedOption === 'useCredit' && credit > 0;
-  const canApplyDiscount = hasDiscounts && !applyCredit;
+  const birthdayCashAmount = occasionCashAmountOf(birthdayGift);
+  const anniversaryCashAmount = occasionCashAmountOf(anniversaryGift);
+  const occasionCreditAmount = birthdayCashAmount || anniversaryCashAmount;
+  const occasionCreditId =
+    (birthdayCashAmount > 0 ? Number(birthdayGift?.creditId) : 0)
+    || (anniversaryCashAmount > 0 ? Number(anniversaryGift?.creditId) : 0)
+    || 0;
+  const occasionDiscountId =
+    occasionDiscounts[0]?.id
+    || Number(birthdayGift?.discountId)
+    || Number(anniversaryGift?.discountId)
+    || 0;
+  const applyOccasionCredit = selectedOption !== 'useCredit' && occasionCreditAmount > 0 && occasionCreditId > 0;
+  const applyWalletCredit = selectedOption === 'useCredit' && credit > 0;
+  const applyCredit = applyWalletCredit || applyOccasionCredit;
+  const canApplyDiscount = hasDiscounts && !applyWalletCredit && !applyOccasionCredit;
 
   const creditOptions: CreditOption[] = [
     { id: 'useCredit', title: 'استفاده از اعتبار (کش‌بک)', selected: true },
@@ -139,8 +168,20 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
 
   const buildLinePreviews = (): LinePreview[] => {
     const servicesWithPrices = getServicesWithPrices();
-    let remainingCredit = applyCredit ? credit : 0;
-    const shouldApplyDiscount = applyDiscount && !applyCredit;
+    let remainingCredit = applyOccasionCredit
+      ? occasionCreditAmount
+      : applyWalletCredit
+        ? credit
+        : 0;
+    const shouldApplyDiscount = applyDiscount && canApplyDiscount;
+    let remainingFixedDiscount = 0;
+    if (shouldApplyDiscount) {
+      const previewDiscount = getApplicableDiscount(
+        parseInt(servicesWithPrices[0]?.id || '0', 10),
+      );
+      const percent = Number(previewDiscount?.percent) || 0;
+      remainingFixedDiscount = percent > 0 ? 0 : Number(previewDiscount?.fixedAmount) || 0;
+    }
 
     return servicesWithPrices.map((service) => {
       const price = parseAmount(service.amount);
@@ -149,14 +190,19 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
 
       let discountAmount = 0;
       if (applicableDiscount && price > 0) {
-        const fixed = Number(applicableDiscount.fixedAmount) || 0;
-        discountAmount = fixed > 0
-          ? Math.min(price, Math.round(fixed))
-          : Math.round((price * (Number(applicableDiscount.percent) || 0)) / 100);
+        const percent = Number(applicableDiscount.percent) || 0;
+        if (percent > 0) {
+          discountAmount = Math.round((price * percent) / 100);
+        } else if (remainingFixedDiscount > 0) {
+          discountAmount = Math.min(price, remainingFixedDiscount);
+          remainingFixedDiscount -= discountAmount;
+        }
       }
 
       const adjustedPrice = Math.max(0, price - discountAmount);
-      const lineMaxUsage = getLineMaxCreditRials(lineId, adjustedPrice);
+      const lineMaxUsage = applyOccasionCredit
+        ? adjustedPrice
+        : getLineMaxCreditRials(lineId, adjustedPrice);
       const payFromCredit = remainingCredit > 0 && adjustedPrice > 0
         ? Math.min(adjustedPrice, remainingCredit, lineMaxUsage)
         : 0;
@@ -254,6 +300,11 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
       branchId: Number(selectedBranch?.id) || 0,
       applyCredit,
       applyDiscount: applyDiscount && canApplyDiscount,
+      ...(applyOccasionCredit && occasionCreditId > 0
+        ? { discountId: occasionCreditId }
+        : applyDiscount && canApplyDiscount && occasionDiscountId > 0
+          ? { discountId: occasionDiscountId }
+          : {}),
       confirmNewCustomer: isNewCustomer,
       ...(isNewCustomer ? { customerName: trimmedName } : {}),
     };
@@ -344,8 +395,12 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
 
         if (storedCustomer) {
           const customerDataJson = JSON.parse(storedCustomer) as Customer;
-          const creditAmount = parseAmount(customerDataJson.credit);
-          setCredit(creditAmount);
+          const totalCredit = parseAmount(customerDataJson.credit);
+          const reservedOccasionCash =
+            occasionCashAmountOf(customerDataJson.birthdayGift)
+            + occasionCashAmountOf(customerDataJson.anniversaryGift);
+          const walletCredit = Math.max(0, totalCredit - reservedOccasionCash);
+          setCredit(walletCredit);
           setCustomerData(customerDataJson);
 
           if (customerDataJson.isNewCustomer) {
@@ -356,7 +411,12 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
             setNewCustomerName(existingName);
           }
 
-          if (creditAmount === 0) {
+          const hasOccasion =
+            reservedOccasionCash > 0
+            || (customerDataJson.discounts || []).some(isOccasionDiscount)
+            || customerDataJson.birthdayGift
+            || customerDataJson.anniversaryGift;
+          if (walletCredit === 0 || hasOccasion) {
             setSelectedOption('saveForLater');
           }
         }
@@ -430,11 +490,28 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
   ]);
 
   const formatDiscountValue = (discount: CustomerActiveDiscount) => {
-    const fixed = Number(discount.fixedAmount) || 0;
+    const percent = Number(discount.percent) || 0;
+    const fixed = percent > 0 ? 0 : Number(discount.fixedAmount) || 0;
+    if (percent > 0) {
+      return `${percent}%`;
+    }
     if (fixed > 0) {
       return `${formatNumberWithSeparator(fixed)} ${CURRENCY_LABEL}`;
     }
-    return `${discount.percent}%`;
+    return discount.typeLabel || 'تخفیف';
+  };
+
+  const formatOccasionGift = (gift: OccasionGift, kind: 'birthday' | 'anniversary') => {
+    const title = kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+    if (gift.giftType === 'discount') {
+      return `${gift.discountPercent}٪ ${title}`;
+    }
+    if (gift.giftType === 'cash') {
+      return `${formatNumberWithSeparator(Number(gift.amountTomans) || 0)} ${CURRENCY_LABEL} ${title}`;
+    }
+    return gift.itemDescription?.trim()
+      ? `${title}: ${gift.itemDescription}`
+      : title;
   };
 
   return (
@@ -549,9 +626,21 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
           })()}
         </View>
 
-        {occasionDiscounts.length > 0 && (
+        {hasOccasionGift && (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>هدیه تولد و سالگرد</Text>
+            {birthdayGift && birthdayGift.giftType !== 'discount' && (
+              <View style={[styles.discountChip, styles.birthdayChip]}>
+                <Text style={styles.discountAmountText}>{formatOccasionGift(birthdayGift, 'birthday')}</Text>
+                <Text style={styles.discountDateText}>· تا {birthdayGift.toDate}</Text>
+              </View>
+            )}
+            {anniversaryGift && anniversaryGift.giftType !== 'discount' && (
+              <View style={[styles.discountChip, styles.anniversaryChip]}>
+                <Text style={styles.discountAmountText}>{formatOccasionGift(anniversaryGift, 'anniversary')}</Text>
+                <Text style={styles.discountDateText}>· تا {anniversaryGift.toDate}</Text>
+              </View>
+            )}
             {occasionDiscounts.map((discount) => (
               <View
                 key={`occasion-${discount.id}`}
@@ -572,7 +661,7 @@ function Credit({ navigation }: { navigation: any }): React.JSX.Element {
                 <Text style={styles.discountDateText}>· تا {discount.toDate}</Text>
               </View>
             ))}
-            {applyCredit && (
+            {applyCredit && occasionDiscounts.length > 0 && (
               <Text style={styles.hintText}>
                 با استفاده از اعتبار، این تخفیف اعمال نمی‌شود.
               </Text>

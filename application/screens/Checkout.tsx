@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Switch,
   Keyboard,
   Modal,
   ScrollView,
@@ -25,7 +24,7 @@ import { useCustomer, useCashbacks, useLinesDropdown, fetchShareDiscountPreview 
 import { useServiceContext } from '../providers/ServiceProvider';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
-import type { Customer, CustomerActiveDiscount, ShareDiscountPreviewItem } from '../services/api';
+import type { Customer, CustomerActiveDiscount, OccasionGift, ShareDiscountPreviewItem } from '../services/api';
 import { colors, fonts } from '../theme/colors';
 import moment from 'moment-jalaali';
 
@@ -50,11 +49,135 @@ const parseAmount = (value: unknown): number => {
 };
 
 /** Backend DiscountType: Birthday=4, Anniversary=5 */
-const isBirthdayDiscount = (d: CustomerActiveDiscount) =>
-  Number(d.type) === 4 || d.typeLabel?.includes('تولد');
+const isBirthdayDiscount = (d: CustomerActiveDiscount) => {
+  const type = Number(d.type);
+  return type === 4 || String(d.type).toLowerCase() === 'birthday' || d.typeLabel?.includes('تولد');
+};
 
-const isAnniversaryDiscount = (d: CustomerActiveDiscount) =>
-  Number(d.type) === 5 || d.typeLabel?.includes('سالگرد');
+const isAnniversaryDiscount = (d: CustomerActiveDiscount) => {
+  const type = Number(d.type);
+  return type === 5 || String(d.type).toLowerCase() === 'anniversary' || d.typeLabel?.includes('سالگرد');
+};
+
+const isOccasionDiscount = (d: CustomerActiveDiscount) =>
+  isBirthdayDiscount(d) || isAnniversaryDiscount(d);
+
+const discountPercentOf = (discount: CustomerActiveDiscount) => Number(discount.percent) || 0;
+const discountFixedOf = (discount: CustomerActiveDiscount) =>
+  discountPercentOf(discount) > 0 ? 0 : Number(discount.fixedAmount) || 0;
+
+const STACK_PALETTE = [
+  { bg: '#F5A623', deep: '#C47C08' },
+  { bg: '#E53935', deep: '#B71C1C' },
+  { bg: '#2C2C2E', deep: '#1C1C1E' },
+  { bg: '#6C4DFF', deep: '#4C33C9' },
+  { bg: '#2F8F5B', deep: '#1F6B42' },
+  { bg: '#12998C', deep: '#0B6F66' },
+  { bg: '#FF6B3D', deep: '#C4471A' },
+];
+
+const STACK_CARD_HEIGHT = 156;
+const STACK_PEEK = 58;
+const STACK_OVERLAP = STACK_CARD_HEIGHT - STACK_PEEK;
+
+type OccasionOption = CustomerActiveDiscount & {
+  applyAs: 'discount' | 'credit' | 'item';
+  kind: 'birthday' | 'anniversary';
+};
+
+const giftToOccasionOption = (
+  gift: OccasionGift | null | undefined,
+  kind: 'birthday' | 'anniversary',
+): OccasionOption | null => {
+  if (!gift) return null;
+  const type = kind === 'birthday' ? 4 : 5;
+  const typeLabel = kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+  const giftType = String(gift.giftType || '').toLowerCase();
+  const toDate = gift.toDate || '';
+
+  if (giftType === 'discount' || (giftType !== 'cash' && giftType !== 'item' && Number(gift.discountPercent) > 0)) {
+    const id = Number(gift.discountId) || (kind === 'birthday' ? -4 : -5);
+    if (Number(gift.discountPercent) <= 0 && !gift.discountId) return null;
+    return {
+      id,
+      percent: Number(gift.discountPercent) || 0,
+      type,
+      typeLabel,
+      toDate,
+      applyAs: 'discount',
+      kind,
+    };
+  }
+
+  if (giftType === 'cash' && Number(gift.amountTomans) > 0 && Number(gift.creditId) > 0) {
+    return {
+      id: Number(gift.creditId),
+      percent: 0,
+      fixedAmount: Number(gift.amountTomans) || 0,
+      type,
+      typeLabel,
+      toDate,
+      applyAs: 'credit',
+      kind,
+    };
+  }
+
+  if (giftType === 'item') {
+    return {
+      id: Number(gift.discountId) || (kind === 'birthday' ? -4 : -5),
+      percent: 0,
+      type,
+      typeLabel: gift.itemDescription?.trim() ? `${typeLabel}: ${gift.itemDescription}` : typeLabel,
+      toDate,
+      applyAs: 'item',
+      kind,
+    };
+  }
+
+  return null;
+};
+
+const occasionCashAmountOf = (gift?: OccasionGift | null): number => {
+  if (!gift || String(gift.giftType || '').toLowerCase() !== 'cash') return 0;
+  return Number(gift.amountTomans) || 0;
+};
+
+const buildOccasionOptions = (
+  discounts: CustomerActiveDiscount[],
+  birthdayGift?: OccasionGift | null,
+  anniversaryGift?: OccasionGift | null,
+): OccasionOption[] => {
+  const fromDiscounts = discounts.filter(isOccasionDiscount);
+
+  const pickForKind = (
+    kind: 'birthday' | 'anniversary',
+    fromGift: OccasionOption | null,
+  ): OccasionOption | null => {
+    const fromList = fromDiscounts
+      .filter((discount) => (kind === 'birthday' ? isBirthdayDiscount(discount) : isAnniversaryDiscount(discount)))
+      .map((discount) => ({
+        ...discount,
+        applyAs: 'discount' as const,
+        kind,
+      }));
+
+    if (fromGift?.applyAs && fromGift.applyAs !== 'discount') {
+      return fromGift;
+    }
+    if (fromGift && Number(fromGift.id) > 0) {
+      return fromGift;
+    }
+    if (fromList[0]) {
+      return fromList[0];
+    }
+    return fromGift;
+  };
+
+  return [
+    pickForKind('birthday', giftToOccasionOption(birthdayGift, 'birthday')),
+    pickForKind('anniversary', giftToOccasionOption(anniversaryGift, 'anniversary')),
+  ].filter((option): option is OccasionOption => option != null);
+};
 
 const convertPersianToEnglish = (persianNumber: string): string => {
   const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -80,6 +203,8 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   const [sharePreviewLoading, setSharePreviewLoading] = useState(false);
   const [sharingEnabled, setSharingEnabled] = useState(true);
   const [showMaxUsageModal, setShowMaxUsageModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [frontCardKey, setFrontCardKey] = useState<string | null>(null);
 
   const englishPhoneNumber = convertPersianToEnglish(phoneNumber);
   const isValidPhone = englishPhoneNumber.length === 11 && englishPhoneNumber.startsWith('09');
@@ -93,19 +218,37 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   const { data: linesData } = useLinesDropdown(branchId);
 
   const discounts = customerData?.discounts || [];
-  const hasDiscounts = discounts.length > 0;
-  const applyCredit = selectedOption === 'useCredit' && credit > 0;
-  const applyDiscount = selectedDiscountId != null && !applyCredit;
-  const selectedDiscount = discounts.find((d) => d.id === selectedDiscountId) ?? null;
+  const otherDiscounts = discounts.filter((d) => !isOccasionDiscount(d));
+  const occasionOptions = useMemo(
+    () => buildOccasionOptions(discounts, customerData?.birthdayGift, customerData?.anniversaryGift),
+    [discounts, customerData?.birthdayGift, customerData?.anniversaryGift],
+  );
+  const hasOccasionGift = occasionOptions.length > 0;
+  const selectedOccasion = occasionOptions.find((option) => option.id === selectedDiscountId) ?? null;
+  const applyOccasionCredit = selectedOccasion?.applyAs === 'credit';
+  const occasionCreditAmount = applyOccasionCredit ? Number(selectedOccasion?.fixedAmount) || 0 : 0;
+  const applyWalletCredit = selectedOption === 'useCredit' && credit > 0 && !applyOccasionCredit;
+  const applyCredit = applyWalletCredit || applyOccasionCredit;
+  const applyDiscount =
+    selectedDiscountId != null &&
+    !applyWalletCredit &&
+    !applyOccasionCredit &&
+    selectedOccasion?.applyAs !== 'item';
+  const selectedDiscount =
+    (selectedOccasion?.applyAs === 'discount' ? selectedOccasion : null)
+    ?? discounts.find((d) => d.id === selectedDiscountId)
+    ?? null;
   const customerReady = Boolean(customerData) && isValidPhone && !customerLoading;
 
-  const pickBestDiscountId = (list: CustomerActiveDiscount[]): number | null => {
+  const pickBestDiscountId = (list: Array<CustomerActiveDiscount | OccasionOption>): number | null => {
     if (!list.length) return null;
-    const sorted = [...list].sort((a, b) => {
-      const aFixed = Number(a.fixedAmount) || 0;
-      const bFixed = Number(b.fixedAmount) || 0;
+    const occasion = list.filter((item) => 'applyAs' in item || isOccasionDiscount(item));
+    const pool = occasion.length ? occasion : list;
+    const sorted = [...pool].sort((a, b) => {
+      const aFixed = discountFixedOf(a);
+      const bFixed = discountFixedOf(b);
       if (aFixed !== bFixed) return bFixed - aFixed;
-      return Number(b.percent) - Number(a.percent);
+      return discountPercentOf(b) - discountPercentOf(a);
     });
     return sorted[0]?.id ?? null;
   };
@@ -122,16 +265,28 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         setCustomerData(null);
         setCredit(0);
         setSelectedDiscountId(null);
+        setNewCustomerName('');
         return;
       }
 
       if (customerResponse?.Code === 200 && customerResponse?.Data) {
         const data = customerResponse.Data;
-        const creditAmount = parseAmount(data.credit);
+        const totalCredit = parseAmount(data.credit);
+        const reservedOccasionCash =
+          occasionCashAmountOf(data.birthdayGift) + occasionCashAmountOf(data.anniversaryGift);
+        const walletCredit = Math.max(0, totalCredit - reservedOccasionCash);
+        const options = buildOccasionOptions(
+          data.discounts || [],
+          data.birthdayGift,
+          data.anniversaryGift,
+        );
+        const bestId = pickBestDiscountId(options.length ? options : (data.discounts || []));
         setCustomerData(data);
-        setCredit(creditAmount);
-        setSelectedOption(creditAmount > 0 ? 'useCredit' : 'saveForLater');
-        setSelectedDiscountId(pickBestDiscountId(data.discounts || []));
+        setCredit(walletCredit);
+        setSelectedDiscountId(bestId);
+        setSelectedOption(
+          options.length === 0 && walletCredit > 0 ? 'useCredit' : 'saveForLater',
+        );
         try {
           await AsyncStorage.setItem('customerData', JSON.stringify(data));
           await AsyncStorage.setItem('phoneNumber', phoneNumber);
@@ -206,8 +361,13 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
 
   const linePreviews: LinePreview[] = useMemo(() => {
     const servicesWithPrices = getServicesWithPrices();
-    let remainingCredit = applyCredit ? credit : 0;
+    let remainingCredit = applyOccasionCredit
+      ? occasionCreditAmount
+      : applyWalletCredit
+        ? credit
+        : 0;
     const shouldApplyDiscount = applyDiscount;
+    let remainingFixedDiscount = selectedDiscount ? discountFixedOf(selectedDiscount) : 0;
 
     return servicesWithPrices.map((service) => {
       const price = parseAmount(service.amount);
@@ -215,13 +375,19 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       const applicableDiscount = shouldApplyDiscount ? getApplicableDiscount(lineId) : null;
       let discountAmount = 0;
       if (applicableDiscount && price > 0) {
-        const fixed = Number(applicableDiscount.fixedAmount) || 0;
-        discountAmount = fixed > 0
-          ? Math.min(price, Math.round(fixed))
-          : Math.round((price * (Number(applicableDiscount.percent) || 0)) / 100);
+        const percent = discountPercentOf(applicableDiscount);
+        const fixed = discountFixedOf(applicableDiscount);
+        if (percent > 0) {
+          discountAmount = Math.round((price * percent) / 100);
+        } else if (remainingFixedDiscount > 0) {
+          discountAmount = Math.min(price, remainingFixedDiscount);
+          remainingFixedDiscount -= discountAmount;
+        }
       }
       const adjustedPrice = Math.max(0, price - discountAmount);
-      const lineMaxUsage = getLineMaxCreditRials(lineId, adjustedPrice);
+      const lineMaxUsage = applyOccasionCredit
+        ? adjustedPrice
+        : getLineMaxCreditRials(lineId, adjustedPrice);
       const payFromCredit = remainingCredit > 0 && adjustedPrice > 0
         ? Math.min(adjustedPrice, remainingCredit, lineMaxUsage)
         : 0;
@@ -238,7 +404,9 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     });
   }, [
     selectedServices,
-    applyCredit,
+    applyWalletCredit,
+    applyOccasionCredit,
+    occasionCreditAmount,
     credit,
     applyDiscount,
     selectedDiscountId,
@@ -267,7 +435,8 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     return { totalMaxUsage, maxUsagePerLine };
   }, [selectedServices, linesData]);
 
-  const usageCeiling = Math.min(credit, maxCreditUsage.totalMaxUsage || credit);
+  const spendableCredit = applyOccasionCredit ? occasionCreditAmount : credit;
+  const usageCeiling = Math.min(spendableCredit, maxCreditUsage.totalMaxUsage || spendableCredit);
 
   useEffect(() => {
     if (!isValidPhone || !branchId || linePreviews.length === 0) {
@@ -305,10 +474,141 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   }, [isValidPhone, englishPhoneNumber, branchId, totalAfterDiscount, applyCredit, applyDiscount, customerData]);
 
   const formatDiscountValue = (discount: CustomerActiveDiscount) => {
-    const fixed = Number(discount.fixedAmount) || 0;
+    const percent = discountPercentOf(discount);
+    const fixed = discountFixedOf(discount);
+    if (percent > 0) return `${percent}%`;
     if (fixed > 0) return `${formatNumberWithSeparator(fixed)} ${CURRENCY_LABEL}`;
-    return `${discount.percent}%`;
+    return discount.typeLabel || 'هدیه';
   };
+
+  const formatOccasionOption = (option: OccasionOption) => {
+    if (option.applyAs === 'discount') {
+      return formatDiscountValue(option);
+    }
+    if (option.applyAs === 'credit') {
+      return `${formatNumberWithSeparator(Number(option.fixedAmount) || 0)} ${CURRENCY_LABEL}`;
+    }
+    return option.typeLabel?.replace(/^هدیه تولد:\s*/, '').replace(/^هدیه سالگرد ازدواج:\s*/, '') || option.typeLabel;
+  };
+
+  const selectOccasionOption = (option: OccasionOption) => {
+    setSelectedDiscountId(option.id);
+    setSelectedOption('saveForLater');
+  };
+
+  const benefitCards = useMemo(() => {
+    const cards: Array<{
+      key: string;
+      kind: 'credit' | 'occasion' | 'discount';
+      label: string;
+      amount: string;
+      metaLabel: string;
+      metaValue?: string;
+      bg: string;
+      deep: string;
+      selected: boolean;
+      onPress: () => void;
+      onAction?: () => void;
+      actionLabel: string;
+    }> = [];
+
+    if (credit > 0) {
+      cards.push({
+        key: 'credit',
+        kind: 'credit',
+        label: 'اعتبار قابل استفاده',
+        amount: `${formatNumberWithSeparator(credit)} ${CURRENCY_LABEL}`,
+        metaLabel: 'سقف استفاده',
+        metaValue: `${formatNumberWithSeparator(Math.min(credit, maxCreditUsage.totalMaxUsage || credit))} ${CURRENCY_LABEL}`,
+        bg: STACK_PALETTE[0].bg,
+        deep: STACK_PALETTE[0].deep,
+        selected: applyWalletCredit,
+        onPress: () => {
+          const enable = !applyWalletCredit;
+          setSelectedOption(enable ? 'useCredit' : 'saveForLater');
+          if (enable) setSelectedDiscountId(null);
+        },
+        onAction: () => setShowMaxUsageModal(true),
+        actionLabel: 'جزئیات',
+      });
+    }
+
+    occasionOptions.forEach((option) => {
+      const title = option.kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+      cards.push({
+        key: `occasion-${option.kind}-${option.id}`,
+        kind: 'occasion',
+        label: title,
+        amount: formatOccasionOption(option),
+        metaLabel: option.toDate ? 'مهلت استفاده' : title,
+        metaValue: option.toDate ? `تا ${option.toDate}` : undefined,
+        bg: STACK_PALETTE[cards.length % STACK_PALETTE.length].bg,
+        deep: STACK_PALETTE[cards.length % STACK_PALETTE.length].deep,
+        selected: selectedDiscountId === option.id,
+        onPress: () => selectOccasionOption(option),
+        actionLabel: selectedDiscountId === option.id ? 'اعمال شد' : 'اعمال',
+      });
+    });
+
+    otherDiscounts.forEach((discount) => {
+      const theme = STACK_PALETTE[cards.length % STACK_PALETTE.length];
+      const selected = selectedDiscountId === discount.id && !applyWalletCredit;
+      const metaParts = [
+        discount.lineTitle,
+        discount.toDate ? `تا ${discount.toDate}` : '',
+      ].filter(Boolean);
+      cards.push({
+        key: `discount-${discount.id}`,
+        kind: 'discount',
+        label: discount.typeLabel || 'تخفیف',
+        amount: formatDiscountValue(discount),
+        metaLabel: metaParts[0] || 'تخفیف فعال',
+        metaValue: metaParts[1],
+        bg: theme.bg,
+        deep: theme.deep,
+        selected,
+        onPress: () => {
+          setSelectedDiscountId(discount.id);
+          setSelectedOption('saveForLater');
+        },
+        actionLabel: selected ? 'اعمال شد' : 'اعمال',
+      });
+    });
+
+    return cards;
+  }, [
+    credit,
+    maxCreditUsage.totalMaxUsage,
+    applyWalletCredit,
+    occasionOptions,
+    otherDiscounts,
+    selectedDiscountId,
+  ]);
+
+  useEffect(() => {
+    if (!benefitCards.length) {
+      setFrontCardKey(null);
+      return;
+    }
+    if (frontCardKey && benefitCards.some((card) => card.key === frontCardKey)) {
+      return;
+    }
+    const selected = benefitCards.find((card) => card.selected);
+    setFrontCardKey(selected?.key || benefitCards[0].key);
+  }, [benefitCards, frontCardKey]);
+
+  const stackedCards = useMemo(() => {
+    if (!benefitCards.length) {
+      return { behind: [] as typeof benefitCards, front: null as (typeof benefitCards)[0] | null };
+    }
+    const activeKey = frontCardKey && benefitCards.some((card) => card.key === frontCardKey)
+      ? frontCardKey
+      : benefitCards.find((card) => card.selected)?.key || benefitCards[0].key;
+    return {
+      behind: benefitCards.filter((card) => card.key !== activeKey),
+      front: benefitCards.find((card) => card.key === activeKey) || benefitCards[0],
+    };
+  }, [benefitCards, frontCardKey]);
 
   const prepareTransactionData = () => {
     if (!isValidPhone) {
@@ -321,6 +621,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     }
 
     const isNewCustomer = Boolean(customerData?.isNewCustomer);
+    const trimmedName = newCustomerName.trim();
 
     return {
       cashBackDto: linePreviews.map((preview) => ({
@@ -337,8 +638,11 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       branchId,
       applyCredit,
       applyDiscount,
-      ...(applyDiscount && selectedDiscountId != null ? { discountId: selectedDiscountId } : {}),
+      ...(selectedDiscountId != null && selectedDiscountId > 0
+        ? { discountId: selectedDiscountId }
+        : {}),
       confirmNewCustomer: isNewCustomer,
+      ...(isNewCustomer ? { customerName: trimmedName || 'مشتری جدید' } : {}),
     };
   };
 
@@ -420,45 +724,73 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
           </View>
         )}
 
-        {customerReady && customerData && (
-          <View style={styles.creditHeroCard}>
-            <View style={styles.creditHeroTop}>
-              <View style={styles.creditHeroLabelRow}>
-                <MoneyIcon width={20} height={20} />
-                <Text style={styles.creditHeroLabel}>اعتبار قابل استفاده</Text>
-              </View>
-              <Text style={styles.creditHeroAmount}>
-                {formatNumberWithSeparator(credit)} {CURRENCY_LABEL}
-              </Text>
-            </View>
-            <View style={styles.creditHeroBottom}>
-              <View style={styles.creditCeilingBlock}>
-                <Text style={styles.creditCeilingLabel}>سقف استفاده</Text>
-                <Text style={styles.creditCeilingValue}>
-                  {formatNumberWithSeparator(usageCeiling)} {CURRENCY_LABEL}
-                </Text>
-              </View>
+        {customerReady && customerData && benefitCards.length > 0 && (
+          <View style={styles.stack}>
+            {[...stackedCards.behind, ...stackedCards.front ? [stackedCards.front] : []].map((card, index) => {
+              const isFront = card.key === stackedCards.front?.key;
+              return (
+                <TouchableOpacity
+                  key={card.key}
+                  activeOpacity={0.92}
+                  onPress={() => {
+                    setFrontCardKey(card.key);
+                    card.onPress();
+                  }}
+                  style={[
+                    styles.stackCard,
+                    index === 0 ? styles.stackCardFirst : null,
+                    { backgroundColor: card.bg, zIndex: index + 1 },
+                    isFront && styles.stackCardFront,
+                  ]}
+                >
+                  <View style={styles.stackHeader}>
+                    <View style={styles.stackTitleRow}>
+                      {card.kind === 'credit' ? (
+                        <MoneyIcon width={18} height={18} />
+                      ) : (
+                        <View style={styles.stackIconDot} />
+                      )}
+                      <Text style={styles.stackTitle} numberOfLines={1}>{card.label}</Text>
+                    </View>
+                    <View style={styles.stackAmountPill}>
+                      <Text style={styles.stackAmountText} numberOfLines={1}>{card.amount}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.stackBody}>
+                    {!!card.metaValue ? (
+                      <Text style={styles.stackBodyMeta}>
+                        {card.metaLabel} · {card.metaValue}
+                      </Text>
+                    ) : (
+                      <Text style={styles.stackBodyMeta}>{card.metaLabel}</Text>
+                    )}
+                    <TouchableOpacity
+                      style={styles.stackActionBtn}
+                      onPress={card.onAction || card.onPress}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.stackActionText}>{card.actionLabel}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+            {(hasOccasionGift || otherDiscounts.length > 0) && (
               <TouchableOpacity
-                style={styles.creditDetailsBtn}
-                onPress={() => setShowMaxUsageModal(true)}
-                activeOpacity={0.85}
+                style={styles.skipLink}
+                onPress={() => {
+                  setSelectedDiscountId(null);
+                  if (!applyWalletCredit) {
+                    setSelectedOption('saveForLater');
+                  }
+                }}
+                activeOpacity={0.8}
               >
-                <Text style={styles.creditDetailsBtnText}>جزئیات</Text>
+                <Text style={styles.skipLinkText}>اعمال نشود</Text>
               </TouchableOpacity>
-            </View>
+            )}
           </View>
         )}
-
-        {/* <View style={styles.summaryChip}>
-          <Text style={styles.summaryChipText}>
-            مبلغ خرید: {formatNumberWithSeparator(totalAmount)} {CURRENCY_LABEL}
-          </Text>
-          <Text style={styles.summaryChipSub}>
-            {activeCashbacks.length > 0
-              ? 'از این خرید بازگشت اعتبار می‌گیرید'
-              : 'از این خرید بازگشت اعتبار نمی‌گیرید'}
-          </Text>
-        </View> */}
 
         {customerReady && customerData && (
           <>
@@ -471,100 +803,22 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
                       : 'اولین خرید این مشتری — در صورت وجود طرح، تخفیف اولین خرید اعمال می‌شود.'}
                   </Text>
                 )}
+                {customerData.isNewCustomer && (
+                  <TextInput
+                    style={[styles.phoneInput, { marginTop: 8 }]}
+                    value={newCustomerName}
+                    onChangeText={setNewCustomerName}
+                    placeholder="نام مشتری (اختیاری)"
+                    placeholderTextColor="#999"
+                    textAlign="right"
+                  />
+                )}
                 {!!customerData.subscriptionCode && (
                   <View style={styles.row}>
                     <Text style={styles.rowValue}>{customerData.subscriptionCode}</Text>
                     <Text style={styles.rowLabel}>اشتراک</Text>
                   </View>
                 )}
-              </View>
-            )}
-
-            {hasDiscounts && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>انتخاب تخفیف یا هدیه</Text>
-                {applyCredit && (
-                  <Text style={styles.hint}>
-                    با استفاده از اعتبار، تخفیف اعمال نمی‌شود.
-                  </Text>
-                )}
-                {discounts.map((discount) => {
-                  const selected = selectedDiscountId === discount.id && !applyCredit;
-                  const disabled = applyCredit;
-                  const title = isBirthdayDiscount(discount)
-                    ? 'هدیه تولد'
-                    : isAnniversaryDiscount(discount)
-                      ? 'هدیه سالگرد ازدواج'
-                      : discount.typeLabel || 'تخفیف';
-                  return (
-                    <TouchableOpacity
-                      key={discount.id}
-                      style={[
-                        styles.discountOption,
-                        isBirthdayDiscount(discount) && styles.birthdayChip,
-                        isAnniversaryDiscount(discount) && styles.anniversaryChip,
-                        selected && styles.discountOptionSelected,
-                        disabled && styles.discountOptionDisabled,
-                      ]}
-                      onPress={() => {
-                        if (disabled) return;
-                        setSelectedDiscountId(discount.id);
-                      }}
-                      activeOpacity={disabled ? 1 : 0.85}
-                    >
-                      <View style={styles.discountOptionBody}>
-                        <Text style={styles.discountStrong}>{formatDiscountValue(discount)}</Text>
-                        <Text style={styles.discountMeta}> {title}</Text>
-                        {!!discount.lineTitle && (
-                          <Text style={styles.discountMeta}> · {discount.lineTitle}</Text>
-                        )}
-                        <Text style={styles.discountDate}> · تا {discount.toDate}</Text>
-                      </View>
-                      <View style={[styles.discountRadio, selected && styles.discountRadioActive]}>
-                        {selected && <View style={styles.discountRadioDot} />}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-                <TouchableOpacity
-                  style={[
-                    styles.discountOption,
-                    styles.discountNoneOption,
-                    selectedDiscountId == null && !applyCredit && styles.discountOptionSelected,
-                    applyCredit && styles.discountOptionDisabled,
-                  ]}
-                  onPress={() => {
-                    if (applyCredit) return;
-                    setSelectedDiscountId(null);
-                  }}
-                  activeOpacity={applyCredit ? 1 : 0.85}
-                >
-                  <Text style={styles.discountNoneText}>بدون تخفیف</Text>
-                  <View
-                    style={[
-                      styles.discountRadio,
-                      selectedDiscountId == null && !applyCredit && styles.discountRadioActive,
-                    ]}
-                  >
-                    {selectedDiscountId == null && !applyCredit && (
-                      <View style={styles.discountRadioDot} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {credit > 0 && (
-              <View style={styles.switchRow}>
-                <Switch
-                  value={selectedOption === 'useCredit'}
-                  onValueChange={(enabled) =>
-                    setSelectedOption(enabled ? 'useCredit' : 'saveForLater')
-                  }
-                  trackColor={{ false: '#CCCCCC', true: '#81C784' }}
-                  thumbColor={selectedOption === 'useCredit' ? '#4CAF50' : '#f4f3f4'}
-                />
-                <Text style={styles.optionText}>استفاده از اعتبار</Text>
               </View>
             )}
 
@@ -602,6 +856,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       </KeyboardAwareScrollView>
 
       <FooterBar
+        compact
         top={
           <View style={styles.amountBar}>
             <View style={styles.amountRow}>
@@ -636,13 +891,13 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         }
       >
         {!customerReady ? (
-          <FooterButton label="شماره مشتری را وارد کنید" disabled />
+          <FooterButton compact label="شماره مشتری را وارد کنید" disabled />
         ) : finalAmountToPay === 0 ? (
-          <FooterButton label="ثبت" onPress={handleSubmit} />
+          <FooterButton compact label="ثبت" onPress={handleSubmit} />
         ) : (
           <>
-            <FooterButton label="کارت‌خوان" flex={1.35} onPress={handleCardPayment} />
-            <FooterButton label="نقدی" variant="secondary" onPress={handleCashPayment} />
+            <FooterButton compact label="کارت‌خوان" flex={1.35} onPress={handleCardPayment} />
+            <FooterButton compact label="نقدی" variant="secondary" onPress={handleCashPayment} />
           </>
         )}
       </FooterBar>
@@ -684,7 +939,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </View >
   );
 }
 
@@ -698,9 +953,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   summaryChip: {
     backgroundColor: colors.orangeTint,
@@ -724,19 +979,19 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   sectionLabel: {
-    fontSize: 12.5,
+    fontSize: 11,
     fontFamily: fonts.bold,
     color: colors.ink,
     textAlign: 'right',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   phoneInput: {
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 17,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 15,
     backgroundColor: colors.surface,
     fontFamily: fonts.bold,
     color: colors.ink,
@@ -746,21 +1001,119 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   errorMessage: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.danger,
     textAlign: 'right',
-    marginTop: 6,
+    marginTop: 4,
     fontFamily: fonts.regular,
   },
   loadingBox: {
-    marginTop: 16,
+    marginTop: 8,
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   loadingText: {
     fontSize: 12,
     color: colors.inkSoft,
     fontFamily: fonts.regular,
+  },
+  stack: {
+    marginTop: 12,
+  },
+  stackCard: {
+    height: STACK_CARD_HEIGHT,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginTop: -STACK_OVERLAP,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  stackCardFirst: {
+    marginTop: 0,
+  },
+  stackCardFront: {
+    elevation: 12,
+    shadowOpacity: 0.3,
+  },
+  stackHeader: {
+    height: STACK_PEEK,
+    paddingHorizontal: 14,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  stackTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  stackIconDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+  },
+  stackTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+    textAlign: 'right',
+  },
+  stackAmountPill: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    maxWidth: '46%',
+  },
+  stackAmountText: {
+    fontSize: 11.5,
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+    textAlign: 'left',
+  },
+  stackBody: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 4,
+    justifyContent: 'space-between',
+  },
+  stackBodyMeta: {
+    fontSize: 11,
+    fontFamily: fonts.regular,
+    color: 'rgba(255,255,255,0.88)',
+    textAlign: 'right',
+    marginBottom: 12,
+  },
+  stackActionBtn: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 14,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  stackActionText: {
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+  },
+  skipLink: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    zIndex: 50,
+  },
+  skipLinkText: {
+    fontSize: 12,
+    fontFamily: fonts.medium,
+    color: colors.inkSoft,
   },
   creditHeroCard: {
     marginTop: 12,
@@ -1027,41 +1380,42 @@ const styles = StyleSheet.create({
   },
   amountBar: {
     backgroundColor: colors.bg,
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.line,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 2,
   },
   amountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 18,
   },
   amountRowFinal: {
-    marginTop: 4,
-    paddingTop: 10,
+    marginTop: 2,
+    paddingTop: 5,
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
   amountLabel: {
-    fontSize: 12.5,
+    fontSize: 11,
     fontFamily: fonts.medium,
     color: colors.inkSoft,
   },
   amountLabelBold: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: fonts.bold,
     color: colors.ink,
   },
   amountValue: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontFamily: fonts.bold,
     color: colors.ink,
   },
   amountValueBold: {
-    fontSize: 16,
+    fontSize: 13.5,
     fontFamily: fonts.bold,
     color: colors.ink,
   },

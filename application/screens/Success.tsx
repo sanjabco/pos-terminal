@@ -81,6 +81,9 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
         }
         const response = await createTransactionMutation.mutateAsync(transactionData?.transactionResult);
         console.log('response', response.Data);
+        if (response?.Code && response.Code !== 200 && response.Code !== 201) {
+          throw new Error(response.Message || 'Transaction failed');
+        }
         setResponseData(response.Data);
       } catch (error) {
         console.error('Transaction error:', error);
