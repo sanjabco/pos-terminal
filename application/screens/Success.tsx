@@ -12,6 +12,7 @@ import {
   View,
   BackHandler,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { PosTopBar } from '../components/PosTopBar';
 import { FooterBar, FooterButton } from '../components/FooterBar';
@@ -137,57 +138,64 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
         <View style={styles.contentArea}>
           <View style={styles.contentCard}>
             <View style={styles.whiteBox}>
-              <View style={styles.iconContainer}>
-                <View style={styles.moneyIcon}>
-                  <SuccessIcon height={90} />
-                </View>
-              </View>
-
-              <Text style={styles.successMessage}>پرداخت موفق</Text>
-
-              <View style={styles.infoSection}>
-                <Text style={styles.infoLabel}>کش بک جدید</Text>
-                <View style={styles.amountContainer}>
-                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
-                  <Text style={styles.amountText}>{formatNumberWithSeparator(payBackAmount)}</Text>
-                </View>
-              </View>
-
-              <View style={styles.infoSection}>
-                <Text style={styles.infoLabel}>مبلغ کل</Text>
-                <View style={styles.amountContainer}>
-                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
-                  <Text style={styles.amountText}>{formatNumberWithSeparator(totalAmount)}</Text>
-                </View>
-              </View>
-
-              <View style={styles.infoSection}>
-                <Text style={styles.infoLabel}>مبلغ قابل پرداخت</Text>
-                <View style={styles.amountContainer}>
-                  <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
-                  <Text style={styles.amountText}>{formatNumberWithSeparator(finalAmountToPay)}</Text>
-                </View>
-              </View>
-
-              {discountAmount > 0 && (
-                <View style={styles.infoSection}>
-                  <Text style={styles.infoLabel}>تخفیف اعمال‌شده</Text>
-                  <View style={styles.amountContainer}>
-                    <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
-                    <Text style={styles.amountText}>{formatNumberWithSeparator(discountAmount)}</Text>
+              <ScrollView
+                style={styles.whiteBoxScroll}
+                contentContainerStyle={styles.whiteBoxContent}
+                showsVerticalScrollIndicator={false}
+                bounces
+              >
+                <View style={styles.iconContainer}>
+                  <View style={styles.moneyIcon}>
+                    <SuccessIcon height={90} />
                   </View>
                 </View>
-              )}
 
-              {creditUsed > 0 && (
+                <Text style={styles.successMessage}>پرداخت موفق</Text>
+
                 <View style={styles.infoSection}>
-                  <Text style={styles.infoLabel}>اعتبار استفاده شده</Text>
+                  <Text style={styles.infoLabel}>کش بک جدید</Text>
                   <View style={styles.amountContainer}>
                     <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
-                    <Text style={styles.amountText}>{formatNumberWithSeparator(creditUsed)}</Text>
+                    <Text style={styles.amountText}>{formatNumberWithSeparator(payBackAmount)}</Text>
                   </View>
                 </View>
-              )}
+
+                <View style={styles.infoSection}>
+                  <Text style={styles.infoLabel}>مبلغ کل</Text>
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
+                    <Text style={styles.amountText}>{formatNumberWithSeparator(totalAmount)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoSection}>
+                  <Text style={styles.infoLabel}>مبلغ قابل پرداخت</Text>
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
+                    <Text style={styles.amountText}>{formatNumberWithSeparator(finalAmountToPay)}</Text>
+                  </View>
+                </View>
+
+                {discountAmount > 0 && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.infoLabel}>تخفیف اعمال‌شده</Text>
+                    <View style={styles.amountContainer}>
+                      <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
+                      <Text style={styles.amountText}>{formatNumberWithSeparator(discountAmount)}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {creditUsed > 0 && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.infoLabel}>اعتبار استفاده شده</Text>
+                    <View style={styles.amountContainer}>
+                      <Text style={styles.currencyText}>{CURRENCY_LABEL}</Text>
+                      <Text style={styles.amountText}>{formatNumberWithSeparator(creditUsed)}</Text>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
             </View>
           </View>
         </View>
@@ -219,10 +227,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 24,
-    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.line,
+    overflow: 'hidden',
+  },
+  whiteBoxScroll: {
+    flex: 1,
+  },
+  whiteBoxContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
   },
   iconContainer: {
     alignItems: 'center',

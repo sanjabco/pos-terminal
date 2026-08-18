@@ -62,6 +62,11 @@ const isAnniversaryDiscount = (d: CustomerActiveDiscount) => {
 const isOccasionDiscount = (d: CustomerActiveDiscount) =>
   isBirthdayDiscount(d) || isAnniversaryDiscount(d);
 
+const isShareClubDiscount = (d: CustomerActiveDiscount) => {
+  const type = Number(d.type);
+  return type === 3 || String(d.type).toLowerCase() === 'shareclub' || d.typeLabel?.includes('اشتراک');
+};
+
 const discountPercentOf = (discount: CustomerActiveDiscount) => Number(discount.percent) || 0;
 const discountFixedOf = (discount: CustomerActiveDiscount) =>
   discountPercentOf(discount) > 0 ? 0 : Number(discount.fixedAmount) || 0;
@@ -223,7 +228,6 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     () => buildOccasionOptions(discounts, customerData?.birthdayGift, customerData?.anniversaryGift),
     [discounts, customerData?.birthdayGift, customerData?.anniversaryGift],
   );
-  const hasOccasionGift = occasionOptions.length > 0;
   const selectedOccasion = occasionOptions.find((option) => option.id === selectedDiscountId) ?? null;
   const applyOccasionCredit = selectedOccasion?.applyAs === 'credit';
   const occasionCreditAmount = applyOccasionCredit ? Number(selectedOccasion?.fixedAmount) || 0 : 0;
@@ -340,6 +344,21 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     });
   }, [cashbacksData, selectedServices]);
 
+  useEffect(() => {
+    if (!selectedDiscount || !isShareClubDiscount(selectedDiscount) || selectedServices.length === 0) {
+      return;
+    }
+    if (activeCashbacks.length === 0) {
+      return;
+    }
+    const allLinesHaveCashback = selectedServices.every((service) =>
+      activeCashbacks.some((cb: any) => Number(cb.lineId) === Number(service.id)),
+    );
+    if (allLinesHaveCashback) {
+      setSelectedDiscountId(null);
+    }
+  }, [selectedDiscount, selectedServices, activeCashbacks]);
+
   const getLineMaxCreditRials = (lineId: number, serviceAmount: number): number => {
     const lines = linesData?.Data?.lines || [];
     const line = lines.find((l: any) => l.id === lineId);
@@ -352,6 +371,12 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
 
   const getApplicableDiscount = (lineId: number): CustomerActiveDiscount | null => {
     if (!selectedDiscount) return null;
+    if (
+      isShareClubDiscount(selectedDiscount) &&
+      activeCashbacks.some((cb: any) => Number(cb.lineId) === Number(lineId))
+    ) {
+      return null;
+    }
     const branchOk =
       selectedDiscount.branchId == null || Number(selectedDiscount.branchId) === branchId;
     const lineOk =
@@ -412,6 +437,8 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     selectedDiscountId,
     discounts,
     linesData,
+    activeCashbacks,
+    selectedDiscount,
   ]);
 
   const totalAmount = linePreviews.reduce((sum, p) => sum + p.price, 0) || getTotalAmount();
@@ -508,11 +535,13 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       deep: string;
       selected: boolean;
       onPress: () => void;
-      onAction?: () => void;
+      onSkip: () => void;
+      onDetail?: () => void;
       actionLabel: string;
     }> = [];
 
     if (credit > 0) {
+      const selected = applyWalletCredit;
       cards.push({
         key: 'credit',
         kind: 'credit',
@@ -522,19 +551,20 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         metaValue: `${formatNumberWithSeparator(Math.min(credit, maxCreditUsage.totalMaxUsage || credit))} ${CURRENCY_LABEL}`,
         bg: STACK_PALETTE[0].bg,
         deep: STACK_PALETTE[0].deep,
-        selected: applyWalletCredit,
+        selected,
         onPress: () => {
-          const enable = !applyWalletCredit;
-          setSelectedOption(enable ? 'useCredit' : 'saveForLater');
-          if (enable) setSelectedDiscountId(null);
+          setSelectedOption('useCredit');
+          setSelectedDiscountId(null);
         },
-        onAction: () => setShowMaxUsageModal(true),
-        actionLabel: 'جزئیات',
+        onSkip: () => setSelectedOption('saveForLater'),
+        onDetail: () => setShowMaxUsageModal(true),
+        actionLabel: selected ? 'اعمال نشود' : 'اعمال',
       });
     }
 
     occasionOptions.forEach((option) => {
       const title = option.kind === 'birthday' ? 'هدیه تولد' : 'هدیه سالگرد ازدواج';
+      const selected = selectedDiscountId === option.id;
       cards.push({
         key: `occasion-${option.kind}-${option.id}`,
         kind: 'occasion',
@@ -544,9 +574,14 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         metaValue: option.toDate ? `تا ${option.toDate}` : undefined,
         bg: STACK_PALETTE[cards.length % STACK_PALETTE.length].bg,
         deep: STACK_PALETTE[cards.length % STACK_PALETTE.length].deep,
-        selected: selectedDiscountId === option.id,
+        selected,
         onPress: () => selectOccasionOption(option),
-        actionLabel: selectedDiscountId === option.id ? 'اعمال شد' : 'اعمال',
+        onSkip: () => {
+          if (selectedDiscountId === option.id) {
+            setSelectedDiscountId(null);
+          }
+        },
+        actionLabel: selected ? 'اعمال نشود' : 'اعمال',
       });
     });
 
@@ -571,7 +606,12 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
           setSelectedDiscountId(discount.id);
           setSelectedOption('saveForLater');
         },
-        actionLabel: selected ? 'اعمال شد' : 'اعمال',
+        onSkip: () => {
+          if (selectedDiscountId === discount.id) {
+            setSelectedDiscountId(null);
+          }
+        },
+        actionLabel: selected ? 'اعمال نشود' : 'اعمال',
       });
     });
 
@@ -734,7 +774,9 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
                   activeOpacity={0.92}
                   onPress={() => {
                     setFrontCardKey(card.key);
-                    card.onPress();
+                    if (!card.selected) {
+                      card.onPress();
+                    }
                   }}
                   style={[
                     styles.stackCard,
@@ -757,16 +799,23 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
                     </View>
                   </View>
                   <View style={styles.stackBody}>
-                    {!!card.metaValue ? (
-                      <Text style={styles.stackBodyMeta}>
-                        {card.metaLabel} · {card.metaValue}
-                      </Text>
-                    ) : (
-                      <Text style={styles.stackBodyMeta}>{card.metaLabel}</Text>
-                    )}
+                    <View style={styles.stackMetaRow}>
+                      {!!card.metaValue ? (
+                        <Text style={styles.stackBodyMeta}>
+                          {card.metaLabel} · {card.metaValue}
+                        </Text>
+                      ) : (
+                        <Text style={styles.stackBodyMeta}>{card.metaLabel}</Text>
+                      )}
+                      {!!card.onDetail && (
+                        <TouchableOpacity onPress={card.onDetail} activeOpacity={0.85} hitSlop={8}>
+                          <Text style={styles.stackDetailText}>جزئیات</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     <TouchableOpacity
                       style={styles.stackActionBtn}
-                      onPress={card.onAction || card.onPress}
+                      onPress={card.selected ? card.onSkip : card.onPress}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.stackActionText}>{card.actionLabel}</Text>
@@ -775,20 +824,15 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
                 </TouchableOpacity>
               );
             })}
-            {(hasOccasionGift || otherDiscounts.length > 0) && (
+            {stackedCards.front?.selected ? (
               <TouchableOpacity
                 style={styles.skipLink}
-                onPress={() => {
-                  setSelectedDiscountId(null);
-                  if (!applyWalletCredit) {
-                    setSelectedOption('saveForLater');
-                  }
-                }}
+                onPress={stackedCards.front.onSkip}
                 activeOpacity={0.8}
               >
                 <Text style={styles.skipLinkText}>اعمال نشود</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         )}
 
@@ -1085,12 +1129,24 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     justifyContent: 'space-between',
   },
+  stackMetaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 12,
+  },
   stackBodyMeta: {
+    flex: 1,
     fontSize: 11,
     fontFamily: fonts.regular,
     color: 'rgba(255,255,255,0.88)',
     textAlign: 'right',
-    marginBottom: 12,
+  },
+  stackDetailText: {
+    fontSize: 11,
+    fontFamily: fonts.bold,
+    color: 'rgba(255,255,255,0.95)',
   },
   stackActionBtn: {
     backgroundColor: 'rgba(255,255,255,0.18)',

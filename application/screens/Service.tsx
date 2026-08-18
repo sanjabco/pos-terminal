@@ -11,11 +11,11 @@ import {
     Text,
     View,
     TouchableOpacity,
-    ScrollView,
     TextInput,
     ActivityIndicator,
     Image,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLinesDropdown } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
@@ -194,11 +194,12 @@ function ServiceContent({
                 }
             />
 
-            <ScrollView
+            <KeyboardAwareScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.scrollContent}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
+                bottomOffset={120}
             >
                 <Text style={styles.instructionText}>بخش و مبلغ را انتخاب کنید</Text>
 
@@ -242,7 +243,7 @@ function ServiceContent({
                         </View>
                     );
                 })}
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <FooterBar
                 compact
