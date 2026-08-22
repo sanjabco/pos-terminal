@@ -131270,6 +131270,11 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
   var isOccasionDiscount = function isOccasionDiscount(d) {
     return isBirthdayDiscount(d) || isAnniversaryDiscount(d);
   };
+  var isShareClubDiscount = function isShareClubDiscount(d) {
+    var _d$typeLabel3;
+    var type = Number(d.type);
+    return type === 3 || String(d.type).toLowerCase() === 'shareclub' || ((_d$typeLabel3 = d.typeLabel) == null ? undefined : _d$typeLabel3.includes('اشتراک'));
+  };
   var discountPercentOf = function discountPercentOf(discount) {
     return Number(discount.percent) || 0;
   };
@@ -131386,7 +131391,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     return result;
   };
   function Checkout(_ref) {
-    var _occasionOptions$find, _ref2, _ref3, _stackedCards$front2;
+    var _occasionOptions$find, _ref2, _ref3;
     var navigation = _ref.navigation;
     var _useSnackbarContext = (0, _$$_REQUIRE(_dependencyMap[10]).useSnackbarContext)(),
       showError = _useSnackbarContext.showError;
@@ -131569,6 +131574,22 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
         return fromDate <= now && toDate >= now;
       });
     }, [cashbacksData, selectedServices]);
+    (0, _react.useEffect)(function () {
+      if (!selectedDiscount || !isShareClubDiscount(selectedDiscount) || selectedServices.length === 0) {
+        return;
+      }
+      if (activeCashbacks.length === 0) {
+        return;
+      }
+      var allLinesHaveCashback = selectedServices.every(function (service) {
+        return activeCashbacks.some(function (cb) {
+          return Number(cb.lineId) === Number(service.id);
+        });
+      });
+      if (allLinesHaveCashback) {
+        setSelectedDiscountId(null);
+      }
+    }, [selectedDiscount, selectedServices, activeCashbacks]);
     var getLineMaxCreditRials = function getLineMaxCreditRials(lineId, serviceAmount) {
       var _linesData$Data;
       var lines = (linesData == null ? undefined : (_linesData$Data = linesData.Data) == null ? undefined : _linesData$Data.lines) || [];
@@ -131581,6 +131602,11 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
     };
     var getApplicableDiscount = function getApplicableDiscount(lineId) {
       if (!selectedDiscount) return null;
+      if (isShareClubDiscount(selectedDiscount) && activeCashbacks.some(function (cb) {
+        return Number(cb.lineId) === Number(lineId);
+      })) {
+        return null;
+      }
       var branchOk = selectedDiscount.branchId == null || Number(selectedDiscount.branchId) === branchId;
       var lineOk = selectedDiscount.lineId == null || Number(selectedDiscount.lineId) === Number(lineId);
       return branchOk && lineOk ? selectedDiscount : null;
@@ -131619,7 +131645,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
           cashPayment: Math.max(0, adjustedPrice - payFromCredit)
         };
       });
-    }, [selectedServices, applyWalletCredit, applyOccasionCredit, occasionCreditAmount, credit, applyDiscount, selectedDiscountId, discounts, linesData]);
+    }, [selectedServices, applyWalletCredit, applyOccasionCredit, occasionCreditAmount, credit, applyDiscount, selectedDiscountId, discounts, linesData, activeCashbacks, selectedDiscount]);
     var totalAmount = linePreviews.reduce(function (sum, p) {
       return sum + p.price;
     }, 0) || getTotalAmount();
@@ -131943,9 +131969,9 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
             style: styles.loadingText,
             children: "\u062F\u0631 \u062D\u0627\u0644 \u062F\u0631\u06CC\u0627\u0641\u062A \u0627\u0637\u0644\u0627\u0639\u0627\u062A \u0645\u0634\u062A\u0631\u06CC..."
           })]
-        }), customerReady && customerData && benefitCards.length > 0 && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
+        }), customerReady && customerData && benefitCards.length > 0 && /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.View, {
           style: styles.stack,
-          children: [[].concat((0, _toConsumableArray2.default)(stackedCards.behind), (0, _toConsumableArray2.default)(stackedCards.front ? [stackedCards.front] : [])).map(function (card, index) {
+          children: [].concat((0, _toConsumableArray2.default)(stackedCards.behind), (0, _toConsumableArray2.default)(stackedCards.front ? [stackedCards.front] : [])).map(function (card, index) {
             var _stackedCards$front;
             var isFront = card.key === ((_stackedCards$front = stackedCards.front) == null ? undefined : _stackedCards$front.key);
             return /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.TouchableOpacity, {
@@ -132012,15 +132038,7 @@ __d(function (global, _$$_REQUIRE, _$$_IMPORT_DEFAULT, _$$_IMPORT_ALL, module, e
                 })]
               })]
             }, card.key);
-          }), (_stackedCards$front2 = stackedCards.front) != null && _stackedCards$front2.selected ? /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.TouchableOpacity, {
-            style: styles.skipLink,
-            onPress: stackedCards.front.onSkip,
-            activeOpacity: 0.8,
-            children: /*#__PURE__*/(0, _jsxRuntime.jsx)(_reactNative.Text, {
-              style: styles.skipLinkText,
-              children: "\u0627\u0639\u0645\u0627\u0644 \u0646\u0634\u0648\u062F"
-            })
-          }) : null]
+          })
         }), customerReady && customerData && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_jsxRuntime.Fragment, {
           children: [(customerData.isNewCustomer || customerData.isFirstBuyEligible || !!customerData.subscriptionCode) && /*#__PURE__*/(0, _jsxRuntime.jsxs)(_reactNative.View, {
             style: styles.card,

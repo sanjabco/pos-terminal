@@ -824,7 +824,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
                 </TouchableOpacity>
               );
             })}
-            {stackedCards.front?.selected ? (
+            {/* {stackedCards.front?.selected ? (
               <TouchableOpacity
                 style={styles.skipLink}
                 onPress={stackedCards.front.onSkip}
@@ -832,7 +832,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
               >
                 <Text style={styles.skipLinkText}>اعمال نشود</Text>
               </TouchableOpacity>
-            ) : null}
+            ) : null} */}
           </View>
         )}
 
