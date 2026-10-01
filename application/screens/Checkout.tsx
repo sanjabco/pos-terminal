@@ -764,6 +764,12 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
           </View>
         )}
 
+        {isValidPhone && !customerLoading && customerResponse?.Code === 200 && !!customerResponse.Data?.name?.trim() && (
+          <Text style={styles.customerName}>
+            نام مشتری: {customerResponse.Data.name.trim()}
+          </Text>
+        )}
+
         {customerReady && customerData && benefitCards.length > 0 && (
           <View style={styles.stack}>
             {[...stackedCards.behind, ...stackedCards.front ? [stackedCards.front] : []].map((card, index) => {
@@ -1043,6 +1049,13 @@ const styles = StyleSheet.create({
   phoneInputError: {
     borderColor: colors.orange,
     borderWidth: 1.5,
+  },
+  customerName: {
+    marginTop: 8,
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    color: colors.ink,
+    textAlign: 'right',
   },
   errorMessage: {
     fontSize: 10,
