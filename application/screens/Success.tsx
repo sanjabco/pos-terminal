@@ -18,16 +18,18 @@ import { PosTopBar } from '../components/PosTopBar';
 import { FooterBar, FooterButton } from '../components/FooterBar';
 import SuccessIcon from '../components/SuccessIcon';
 import { useServiceContext } from '../providers/ServiceProvider';
-import { useCreateTransaction } from '../hooks/useApi';
+import { useCashbacks, useCreateTransaction } from '../hooks/useApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
 import { colors, fonts } from '../theme/colors';
+import { getPurchaseCashback } from '../utils/purchaseCashback';
 
 function Success({ navigation, route }: { navigation: any; route: any }): React.JSX.Element {
   // Get service context to clear services after transaction
   const { clearServices } = useServiceContext();
   const createTransactionMutation = useCreateTransaction();
+  const { data: cashbacksData } = useCashbacks();
   const { showError } = useSnackbarContext();
   // Get transaction data from navigation params
   const transactionData = route?.params;
@@ -51,7 +53,11 @@ function Success({ navigation, route }: { navigation: any; route: any }): React.
       0,
     ) ||
     0;
-  const payBackAmount = resultData?.payBackAmount || 0;
+  const payBackAmount = getPurchaseCashback(
+    responseData?.result || [],
+    transactionData?.transactionResult?.cashBackDto || [],
+    cashbacksData?.Code === 200 ? cashbacksData.Data?.cashBackModel || [] : [],
+  );
 
   const goHome = async () => {
     try {

@@ -30,9 +30,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@appsonair.ir/react-native@npm:^1.0.1":
-  version: 1.0.2
-  resolution: "@appsonair.ir/react-native@npm:1.0.2"
+"@appsonair.ir/react-native@npm:^1.0.15":
+  version: 1.0.15
+  resolution: "@appsonair.ir/react-native@npm:1.0.15"
   dependencies:
     fflate: ^0.8.2
   peerDependencies:
@@ -44,7 +44,7 @@ __metadata:
   peerDependenciesMeta:
     react-native-blob-util:
       optional: true
-  checksum: 0c4aa3092b6130bd0bf03e003727996116ae6cbe8715d74d30000a0756d48b1932d34b3d7cd5e8444c19bb1961c1f09165c83bd24ab3df358db660e98ab28e41
+  checksum: c75e316ab6b3b823068b60f8bedfd438f5fd28ce878285f2cfc481efe81b0469c96dbb484f4c7583420078d3bc1be3ed58a00def0924ce2a982257f935389f05
   languageName: node
   linkType: hard
 
@@ -4586,13 +4586,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^16.4.5":
-  version: 16.6.1
-  resolution: "dotenv@npm:16.6.1"
-  checksum: e8bd63c9a37f57934f7938a9cf35de698097fadf980cb6edb61d33b3e424ceccfe4d10f37130b904a973b9038627c2646a3365a904b4406514ea94d7f1816b69
-  languageName: node
-  linkType: hard
-
 "dunder-proto@npm:^1.0.0, dunder-proto@npm:^1.0.1":
   version: 1.0.1
   resolution: "dunder-proto@npm:1.0.1"
@@ -8551,23 +8544,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-config@npm:1.5.5":
+  version: 1.5.5
+  resolution: "react-native-config@npm:1.5.5"
+  peerDependencies:
+    react-native-windows: ">=0.61"
+  peerDependenciesMeta:
+    react-native-windows:
+      optional: true
+  checksum: 96b83f6eaed4d4dd3095c18abdebb6231a9d5206203dbef65070414fb8f0582f30872dbc5120b47bb9e2e019ea842a9678838f7056d0f5e7b9c68de9ff5f971a
+  languageName: node
+  linkType: hard
+
 "react-native-device-info@npm:^14.0.1":
   version: 14.1.1
   resolution: "react-native-device-info@npm:14.1.1"
   peerDependencies:
     react-native: "*"
   checksum: bfd5e63fb9b4e4697caa5be289c619ac2988c0eb4f0d5b9025fcaed82596e861812786c37796647e1d9d8b2ac2afaab383c0e091097540161b9a4e334fd673e1
-  languageName: node
-  linkType: hard
-
-"react-native-dotenv@npm:^3.4.11":
-  version: 3.4.11
-  resolution: "react-native-dotenv@npm:3.4.11"
-  dependencies:
-    dotenv: ^16.4.5
-  peerDependencies:
-    "@babel/runtime": ^7.20.6
-  checksum: 3ebac2c2ed79dd7e4920fd3fc2da9187413b7190231618e4858b46c47833677838b96d531afe7bd5c4b0a60454dba40cb8708722210df5d522e30aefbf41da05
   languageName: node
   linkType: hard
 
@@ -9107,7 +9101,7 @@ __metadata:
   resolution: "sanjabpos@workspace:."
   dependencies:
     "@appsonair.ir/cli": ^1.0.9
-    "@appsonair.ir/react-native": ^1.0.1
+    "@appsonair.ir/react-native": ^1.0.15
     "@babel/core": ^7.20.0
     "@babel/preset-env": ^7.20.0
     "@babel/runtime": ^7.20.0
@@ -9132,8 +9126,8 @@ __metadata:
     react: 18.2.0
     react-native: 0.74.5
     react-native-blob-util: ^0.22.2
+    react-native-config: 1.5.5
     react-native-device-info: ^14.0.1
-    react-native-dotenv: ^3.4.11
     react-native-gesture-handler: 2.25.0
     react-native-keyboard-controller: 1.17.3
     react-native-reanimated: 3.16.3

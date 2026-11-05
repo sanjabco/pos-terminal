@@ -11,10 +11,14 @@
     "test": "jest",
     "ota:staging": "appsonair deploy --env staging --platform android",
     "ota:production": "appsonair deploy --env production --platform android",
-    "apk:production": "appsonair deploy-apk --env production"
+    "apk:production": "appsonair deploy-apk --env production",
+    "android:sepehr": "ENVFILE=.env.sepehr react-native run-android",
+    "build:sepehr": "cd android && ENVFILE=.env.sepehr ./gradlew clean assembleRelease",
+    "android:irankish": "ENVFILE=.env.irankish react-native run-android",
+    "build:irankish": "cd android && ENVFILE=.env.irankish ./gradlew clean assembleRelease"
   },
   "dependencies": {
-    "@appsonair.ir/react-native": "^1.0.1",
+    "@appsonair.ir/react-native": "^1.0.15",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-navigation/native": "6.1.18",
@@ -26,8 +30,8 @@
     "react": "18.2.0",
     "react-native": "0.74.5",
     "react-native-blob-util": "^0.22.2",
+    "react-native-config": "1.5.5",
     "react-native-device-info": "^14.0.1",
-    "react-native-dotenv": "^3.4.11",
     "react-native-gesture-handler": "2.25.0",
     "react-native-keyboard-controller": "1.17.3",
     "react-native-reanimated": "3.16.3",

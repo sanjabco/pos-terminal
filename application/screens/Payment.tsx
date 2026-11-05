@@ -21,7 +21,7 @@ import PaymentIcon from '../components/PaymentIcon';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { useBusinessInfo } from '../hooks/useApi';
 import { validateIranianIBAN, formatIBAN, cleanIBAN } from '../utils/ibanValidator';
-import { POS_TYPE } from '@env';
+import { POS_TYPE } from '../config/env';
 
 const { width, height } = Dimensions.get('window');
 const { PaymentModule, PaymentSepehrModule } = NativeModules;

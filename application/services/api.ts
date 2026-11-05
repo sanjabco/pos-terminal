@@ -438,6 +438,7 @@ export interface TransactionResponse {
 
 export interface CashBack {
   id: number;
+  isActive?: boolean;
   cashBackPercentage: number;
   branchSharePercentage: number;
   maxCashBackCreditPay: string;
