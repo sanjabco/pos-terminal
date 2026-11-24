@@ -26,6 +26,7 @@ import { PosTopBar } from '../components/PosTopBar';
 import { FooterBar, FooterButton } from '../components/FooterBar';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatAmountInput, formatNumberWithSeparator } from '../utils/currency';
+import { API_BASE_URL, type LineDetail } from '../services/api';
 import { colors, fonts } from '../theme/colors';
 
 const appLogo = require('../assets/images/logo.png');
@@ -97,6 +98,21 @@ function ServiceContent({
 
     const handleAmountChange = (serviceId: string, text: string) => {
         updateServiceAmount(serviceId, formatAmountInput(text));
+    };
+
+    const menuBuilderEnabled = servicesData?.Data?.menuBuilderEnabled === true;
+    const changeQuantity = (line: LineDetail, text: string) => {
+        const digits = text.replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776))
+            .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632));
+        if (!/^\d*$/.test(digits)) return;
+        const quantity = Number(digits);
+        if (quantity > 2147483647) return;
+        const amount = Number(line.fixedPrice) * quantity;
+        updateServiceAmount(
+            String(line.id),
+            Number.isSafeInteger(amount) && amount > 0 ? String(amount) : '',
+            digits ? quantity : undefined,
+        );
     };
 
     const canContinue = selectedServices.length > 0 && validateAllAmounts();
@@ -175,7 +191,7 @@ function ServiceContent({
     };
 
     // Get services from API response (lines from the selected branch)
-    const services = (servicesData?.Data as any)?.lines || [];
+    const services: LineDetail[] = servicesData?.Data?.lines || [];
 
     return (
         <View style={styles.container}>
@@ -201,9 +217,9 @@ function ServiceContent({
                 showsVerticalScrollIndicator={false}
                 bottomOffset={120}
             >
-                <Text style={styles.instructionText}>بخش و مبلغ را انتخاب کنید</Text>
+                <Text style={styles.instructionText}>{menuBuilderEnabled ? "محصول و تعداد را انتخاب کنید" : "بخش و مبلغ را انتخاب کنید"}</Text>
 
-                {services.map((service: any) => {
+                {services.map((service) => {
                     const serviceId = String(service.id);
                     const isSelected = isServiceSelected(serviceId);
                     const selected = selectedServices.find((s: any) => String(s.id) === serviceId);
@@ -216,11 +232,24 @@ function ServiceContent({
                             ]}
                         >
                             <TouchableOpacity
+                                disabled={menuBuilderEnabled && !service.fixedPrice && !isSelected}
                                 style={styles.serviceOptionHeader}
                                 onPress={() => toggleService(service)}
                                 activeOpacity={0.8}
                             >
-                                <Text style={styles.serviceOptionText}>{service.title}</Text>
+                                {menuBuilderEnabled && service.menuImage && <Image
+                                    source={{ uri: API_BASE_URL.replace(/\/api$/, '') + service.menuImage }}
+                                    style={styles.productImage} />}
+                                <View style={styles.productInfo}>
+                                    <Text style={styles.serviceOptionText}>{service.title}</Text>
+                                    {menuBuilderEnabled && service.menuFoodGroupTitle &&
+                                        <Text style={styles.productMetadata}>{service.menuFoodGroupTitle}</Text>}
+                                    {menuBuilderEnabled && service.description !== service.title && service.description &&
+                                        <Text style={styles.productMetadata}>{service.description}</Text>}
+                                    {menuBuilderEnabled && <Text style={styles.instructionText}>
+                                        {service.fixedPrice ? `${formatNumberWithSeparator(service.fixedPrice)} ${CURRENCY_LABEL}` : 'قیمت ثابت تنظیم نشده است'}
+                                    </Text>}
+                                </View>
                                 <View style={[styles.checkCircle, isSelected && styles.checkCircleOn]}>
                                     {isSelected ? <Text style={styles.checkmarkText}>✓</Text> : null}
                                 </View>
@@ -228,13 +257,14 @@ function ServiceContent({
                             {isSelected && (
                                 <View style={styles.amountRow}>
                                     <View style={styles.currencyTag}>
-                                        <Text style={styles.currencyTagText}>{CURRENCY_LABEL}</Text>
+                                        <Text style={styles.currencyTagText}>{menuBuilderEnabled ? "تعداد" : CURRENCY_LABEL}</Text>
                                     </View>
                                     <TextInput
                                         style={styles.amountInput}
-                                        value={selected?.amount || ''}
-                                        onChangeText={(text) => handleAmountChange(serviceId, text)}
-                                        placeholder="مبلغ را وارد کنید"
+                                        value={menuBuilderEnabled ? String(selected?.quantity ?? '') : selected?.amount || ''}
+                                        onChangeText={(text) => menuBuilderEnabled ? changeQuantity(service, text) : handleAmountChange(serviceId, text)}
+                                        placeholder={menuBuilderEnabled ? "تعداد" : "مبلغ را وارد کنید"}
+                                        maxLength={menuBuilderEnabled ? 10 : undefined}
                                         placeholderTextColor={colors.inkSoft}
                                         keyboardType="numeric"
                                     />
@@ -268,7 +298,7 @@ function ServiceContent({
                             return;
                         }
                         if (!validateAllAmounts()) {
-                            showError('لطفاً مبلغ همه بخش‌های انتخاب‌شده را وارد کنید');
+                            showError(menuBuilderEnabled ? 'تعداد همه محصولات انتخاب‌شده را وارد کنید' : 'لطفاً مبلغ همه بخش‌های انتخاب‌شده را وارد کنید');
                             return;
                         }
                         navigation.navigate('Checkout');
@@ -286,6 +316,9 @@ function ServiceContent({
 }
 
 const styles = StyleSheet.create({
+    productImage: { width: 48, height: 48, borderRadius: 8, marginLeft: 8 },
+    productInfo: { flex: 1 },
+    productMetadata: { fontSize: 11, textAlign: 'right', color: colors.inkSoft, fontFamily: fonts.regular },
     container: {
         flex: 1,
         backgroundColor: colors.bg,

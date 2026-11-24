@@ -4,6 +4,7 @@ interface Service {
     id: string;
     title: string;
     amount?: string;
+    quantity?: number;
 }
 
 interface ServiceContextType {
@@ -13,7 +14,7 @@ interface ServiceContextType {
     removeService: (serviceId: string) => void;
     clearServices: () => void;
     isServiceSelected: (serviceId: string) => boolean;
-    updateServiceAmount: (serviceId: string, amount: string) => void;
+    updateServiceAmount: (serviceId: string, amount: string, quantity?: number) => void;
     getTotalAmount: () => number;
     getServicesWithPrices: () => Service[];
     validateAllAmounts: () => boolean;
@@ -49,11 +50,11 @@ export const ServiceProvider: React.FC<ServiceProviderProps> = ({ children }) =>
         return selectedServices.some(service => service.id === serviceId);
     };
 
-    const updateServiceAmount = (serviceId: string, amount: string) => {
+    const updateServiceAmount = (serviceId: string, amount: string, quantity?: number) => {
         setSelectedServices(prev =>
             prev.map(service =>
                 service.id === serviceId
-                    ? { ...service, amount }
+                    ? { ...service, amount, quantity }
                     : service
             )
         );

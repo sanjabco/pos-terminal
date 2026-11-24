@@ -2,7 +2,7 @@
  * Checkout Screen - phone + benefits + payment in one step
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -24,11 +24,12 @@ import { useCustomer, useCashbacks, useLinesDropdown, fetchShareDiscountPreview 
 import { useServiceContext } from '../providers/ServiceProvider';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
-import type { Customer, CustomerActiveDiscount, OccasionGift, ShareDiscountPreviewItem } from '../services/api';
+import type { Customer, CustomerActiveDiscount, OccasionGift, ShareDiscountPreviewItem, LinesDropdownResponse, TransactionRequest } from '../services/api';
 import { colors, fonts } from '../theme/colors';
 import moment from 'moment-jalaali';
 
 interface LinePreview {
+  quantity?: number;
   lineId: number;
   lineTitle: string;
   price: number;
@@ -199,6 +200,11 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
   const { selectedBranch } = useAuth();
   const { selectedServices, getTotalAmount, getServicesWithPrices } = useServiceContext();
 
+  const [takeaway, setTakeaway] = useState<boolean | null>(null);
+  const [tableId, setTableId] = useState<number | null>(null);
+  const [showTables, setShowTables] = useState(false);
+  const submitting = useRef(false);
+  const [checkingMenu, setCheckingMenu] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedOption, setSelectedOption] = useState('useCredit');
   const [selectedDiscountId, setSelectedDiscountId] = useState<number | null>(null);
@@ -220,7 +226,10 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     branchId,
   );
   const { data: cashbacksData } = useCashbacks();
-  const { data: linesData } = useLinesDropdown(branchId);
+  const { data: linesData, refetch: refreshLines } = useLinesDropdown(branchId);
+  const menuBuilderEnabled = linesData?.Data?.menuBuilderEnabled === true;
+  const tables = linesData?.Data?.tables ?? [];
+  const selectedTable = tables.find(table => table.id === tableId);
 
   const discounts = customerData?.discounts || [];
   const otherDiscounts = discounts.filter((d) => !isOccasionDiscount(d));
@@ -420,6 +429,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       return {
         lineId,
         lineTitle: service.title,
+        quantity: service.quantity,
         price,
         discountAmount,
         adjustedPrice,
@@ -650,7 +660,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     };
   }, [benefitCards, frontCardKey]);
 
-  const prepareTransactionData = () => {
+  const prepareTransactionData = (menu: LinesDropdownResponse['Data']): TransactionRequest | null => {
     if (!isValidPhone) {
       showError('شماره تلفن معتبر نیست');
       return null;
@@ -660,11 +670,33 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       return null;
     }
 
+    if (menu.menuBuilderEnabled) {
+      if (takeaway == null || (!takeaway && !menu.tables?.some(table => table.id === tableId))) {
+        showError('نوع سفارش و میز سفارش حضوری را انتخاب کنید');
+        return null;
+      }
+      if (linePreviews.some(item => {
+        const fixedPrice = menu.lines.find(line => line.id === item.lineId)?.fixedPrice;
+        return !fixedPrice || !item.quantity || fixedPrice * item.quantity !== item.price;
+      })) {
+        showError('قیمت یا تعداد بخش‌ها را دوباره در صفحه انتخاب بخش بررسی کنید');
+        return null;
+      }
+    } else if (selectedServices.some(service => service.quantity != null)) {
+      showError('وضعیت منوساز تغییر کرده است. بخش‌ها را دوباره انتخاب کنید');
+      return null;
+    }
+
     const isNewCustomer = Boolean(customerData?.isNewCustomer);
     const trimmedName = newCustomerName.trim();
 
     return {
+      ...(menu.menuBuilderEnabled ? {
+        takeaway: takeaway === true,
+        ...(takeaway === false && tableId != null ? { tableId } : {}),
+      } : {}),
       cashBackDto: linePreviews.map((preview) => ({
+        ...(menu.menuBuilderEnabled ? { quantity: preview.quantity } : {}),
         lineId: preview.lineId,
         lineTitle: preview.lineTitle,
         price: Math.round(preview.price).toString(),
@@ -686,7 +718,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
     };
   };
 
-  const goToSuccess = (transactionData: any, paymentMethod = 'cash') => {
+  const goToSuccess = (transactionData: TransactionRequest) => {
     navigation.navigate('Success', {
       totalAmount,
       finalAmountToPay,
@@ -694,39 +726,42 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       discountAmount: totalDiscountAmount,
       creditOption: selectedOption,
       transactionResult: transactionData,
-      paymentMethod,
+      paymentMethod: 'cash',
       result: '',
       eventResult: '',
     });
   };
 
-  const handleCashPayment = () => {
-    const transactionData = prepareTransactionData();
-    if (!transactionData) return;
-    goToSuccess(transactionData, 'cash');
-  };
-
-  const handleCardPayment = () => {
-    const transactionData = prepareTransactionData();
-    if (!transactionData) return;
-    if (finalAmountToPay > 0) {
-      navigation.navigate('Payment', {
-        totalAmount,
-        finalAmountToPay,
-        creditUsed,
-        discountAmount: totalDiscountAmount,
-        creditOption: selectedOption,
-        transactionResult: transactionData,
-      });
-    } else {
-      goToSuccess(transactionData, 'cash');
+  const handlePayment = async (card: boolean) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    setCheckingMenu(true);
+    try {
+      const { data } = await refreshLines({ throwOnError: true });
+      if (!data?.Data) {
+        showError('اطلاعات بخش‌ها دریافت نشد');
+        return;
+      }
+      const transactionData = prepareTransactionData(data.Data);
+      if (!transactionData) return;
+      if (card && finalAmountToPay > 0) {
+        navigation.navigate('Payment', {
+          totalAmount,
+          finalAmountToPay,
+          creditUsed,
+          discountAmount: totalDiscountAmount,
+          creditOption: selectedOption,
+          transactionResult: transactionData,
+        });
+      } else {
+        goToSuccess(transactionData);
+      }
+    } catch {
+      showError('اطلاعات بخش‌ها دریافت نشد');
+    } finally {
+      submitting.current = false;
+      setCheckingMenu(false);
     }
-  };
-
-  const handleSubmit = () => {
-    const transactionData = prepareTransactionData();
-    if (!transactionData) return;
-    goToSuccess(transactionData, 'cash');
   };
 
   return (
@@ -741,6 +776,38 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
       >
 
 
+        {menuBuilderEnabled && (
+          <View style={styles.orderFields}>
+            <Text style={styles.sectionLabel}>نوع سفارش</Text>
+            <View style={styles.orderOptions}>
+              {[false, true].map(option => (
+                <TouchableOpacity key={String(option)} style={[styles.orderOption, takeaway === option && styles.orderOptionSelected]}
+                  accessibilityRole="radio" accessibilityState={{ checked: takeaway === option }}
+                  onPress={() => { setTakeaway(option); setTableId(null); setShowTables(false); }}>
+                  <Text style={styles.orderOptionText}>{option ? 'بیرون‌بر' : 'حضوری'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {takeaway === false && (
+              <>
+                <TouchableOpacity style={styles.orderOption} accessibilityRole="button"
+                  accessibilityState={{ expanded: showTables }} disabled={!tables.length}
+                  onPress={() => setShowTables(value => !value)}>
+                  <Text style={styles.orderOptionText}>{selectedTable?.title || (tables.length ? 'انتخاب میز' : 'میزی ثبت نشده است')}</Text>
+                </TouchableOpacity>
+                {showTables && <View style={styles.orderOptions}>
+                  {tables.map(table => (
+                    <TouchableOpacity key={table.id} style={[styles.orderOption, table.id === tableId && styles.orderOptionSelected]}
+                      accessibilityRole="radio" accessibilityState={{ checked: table.id === tableId }}
+                      onPress={() => { setTableId(table.id); setShowTables(false); }}>
+                      <Text style={styles.orderOptionText}>{table.title}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>}
+              </>
+            )}
+          </View>
+        )}
         <Text style={styles.sectionLabel}>شماره همراه مشتری</Text>
         <TextInput
           style={[styles.phoneInput, !isValidPhone && phoneNumber.length > 0 && styles.phoneInputError]}
@@ -943,11 +1010,11 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         {!customerReady ? (
           <FooterButton compact label="شماره مشتری را وارد کنید" disabled />
         ) : finalAmountToPay === 0 ? (
-          <FooterButton compact label="ثبت" onPress={handleSubmit} />
+          <FooterButton compact label="ثبت" disabled={checkingMenu} onPress={() => handlePayment(false)} />
         ) : (
           <>
-            <FooterButton compact label="کارت‌خوان" flex={1.35} onPress={handleCardPayment} />
-            <FooterButton compact label="نقدی" variant="secondary" onPress={handleCashPayment} />
+            <FooterButton compact label="کارت‌خوان" flex={1.35} disabled={checkingMenu} onPress={() => handlePayment(true)} />
+            <FooterButton compact label="نقدی" variant="secondary" disabled={checkingMenu} onPress={() => handlePayment(false)} />
           </>
         )}
       </FooterBar>
@@ -994,6 +1061,12 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  orderFields: { gap: 8, marginBottom: 16 },
+  orderOptions: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
+  orderOption: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.inkSoft },
+  orderOptionSelected: { borderColor: colors.live, borderWidth: 2 },
+  orderOptionText: { color: colors.ink, textAlign: 'right' },
+
   container: {
     flex: 1,
     backgroundColor: colors.bg,

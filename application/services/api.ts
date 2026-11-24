@@ -245,10 +245,16 @@ export interface LinesDropdownResponse {
   Code: number;
   Data: {
     lines: LineDetail[];
+    menuBuilderEnabled?: boolean;
+    tables?: { id: number; title: string }[];
   };
 }
 
 export interface LineDetail {
+  description?: string;
+  menuImage?: string | null;
+  menuFoodGroupTitle?: string;
+  fixedPrice?: number | null;
   id: number;
   title: string;
   credit: number;
@@ -375,6 +381,7 @@ export interface Customer {
 }
 
 export interface CashBackDto {
+  quantity?: number;
   lineId: number;
   lineTitle: string;
   price: string | number;
@@ -385,6 +392,8 @@ export interface CashBackDto {
 }
 
 export interface TransactionRequest {
+  takeaway?: boolean;
+  tableId?: number;
   cashBackDto: CashBackDto[];
   cardNumber: string;
   shouldSendMessage: boolean;
