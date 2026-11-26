@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-interface Service {
+import type { MenuSelection } from '../services/api';
+
+export interface Service {
+    menuSelection?: MenuSelection;
     id: string;
     title: string;
     amount?: string;
@@ -14,7 +17,7 @@ interface ServiceContextType {
     removeService: (serviceId: string) => void;
     clearServices: () => void;
     isServiceSelected: (serviceId: string) => boolean;
-    updateServiceAmount: (serviceId: string, amount: string, quantity?: number) => void;
+    updateServiceAmount: (serviceId: string, amount: string, quantity?: number, menuSelection?: MenuSelection) => void;
     getTotalAmount: () => number;
     getServicesWithPrices: () => Service[];
     validateAllAmounts: () => boolean;
@@ -50,11 +53,11 @@ export const ServiceProvider: React.FC<ServiceProviderProps> = ({ children }) =>
         return selectedServices.some(service => service.id === serviceId);
     };
 
-    const updateServiceAmount = (serviceId: string, amount: string, quantity?: number) => {
+    const updateServiceAmount = (serviceId: string, amount: string, quantity?: number, menuSelection?: MenuSelection) => {
         setSelectedServices(prev =>
             prev.map(service =>
                 service.id === serviceId
-                    ? { ...service, amount, quantity }
+                    ? { ...service, amount, quantity, menuSelection }
                     : service
             )
         );

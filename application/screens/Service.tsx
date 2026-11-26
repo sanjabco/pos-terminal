@@ -19,14 +19,15 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLinesDropdown } from '../hooks/useApi';
 import { useAuth } from '../hooks/useAuth';
-import { useServiceContext } from '../providers/ServiceProvider';
+import { useServiceContext, type Service as SelectedService } from '../providers/ServiceProvider';
 import { AuthGuard } from '../components/AuthGuard';
 import { LogoutModal } from '../components/LogoutModal';
 import { PosTopBar } from '../components/PosTopBar';
 import { FooterBar, FooterButton } from '../components/FooterBar';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatAmountInput, formatNumberWithSeparator } from '../utils/currency';
-import { API_BASE_URL, type LineDetail } from '../services/api';
+import { API_BASE_URL, type LineDetail, type MenuSelection } from '../services/api';
+import { quoteMenuProduct } from '../utils/menuPricing';
 import { colors, fonts } from '../theme/colors';
 
 const appLogo = require('../assets/images/logo.png');
@@ -101,18 +102,24 @@ function ServiceContent({
     };
 
     const menuBuilderEnabled = servicesData?.Data?.menuBuilderEnabled === true;
-    const changeQuantity = (line: LineDetail, text: string) => {
+    const saveMenuSelection = (line: LineDetail, quantity: number | undefined, selection: MenuSelection) => {
+        const quote = quoteMenuProduct(line, selection);
+        const amount = quote ? quote.unitPrice * (quantity ?? 0) : 0;
+        updateServiceAmount(
+            String(line.id),
+            Number.isSafeInteger(amount) && amount > 0 ? String(amount) : '',
+            quantity,
+            { ...selection, choiceTitles: quote?.choiceTitles ?? [] },
+        );
+    };
+
+    const changeQuantity = (line: LineDetail, text: string, selection: MenuSelection) => {
         const digits = text.replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776))
             .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632));
         if (!/^\d*$/.test(digits)) return;
         const quantity = Number(digits);
         if (quantity > 2147483647) return;
-        const amount = Number(line.fixedPrice) * quantity;
-        updateServiceAmount(
-            String(line.id),
-            Number.isSafeInteger(amount) && amount > 0 ? String(amount) : '',
-            digits ? quantity : undefined,
-        );
+        saveMenuSelection(line, digits ? quantity : undefined, selection);
     };
 
     const canContinue = selectedServices.length > 0 && validateAllAmounts();
@@ -222,7 +229,15 @@ function ServiceContent({
                 {services.map((service) => {
                     const serviceId = String(service.id);
                     const isSelected = isServiceSelected(serviceId);
-                    const selected = selectedServices.find((s: any) => String(s.id) === serviceId);
+                    const selected = selectedServices.find((s: SelectedService) => s.id === serviceId) as SelectedService | undefined;
+                    const option = service.menuPricing?.option;
+                    const addons = service.menuPricing?.addons ?? [];
+                    const selection = selected?.menuSelection ?? { addonIndexes: [] };
+                    const selectedAddons = selection.addonIndexes ?? [];
+                    const startingPrice = option
+                        ? Math.min(...option.choices.map(choice => choice.specialPrice ?? choice.price))
+                        : service.fixedPrice;
+                    const priceLabel = (price: number) => `${formatNumberWithSeparator(price)} ${CURRENCY_LABEL}`;
                     return (
                         <View
                             key={serviceId}
@@ -232,7 +247,7 @@ function ServiceContent({
                             ]}
                         >
                             <TouchableOpacity
-                                disabled={menuBuilderEnabled && !service.fixedPrice && !isSelected}
+                                disabled={menuBuilderEnabled && !startingPrice && !isSelected}
                                 style={styles.serviceOptionHeader}
                                 onPress={() => toggleService(service)}
                                 activeOpacity={0.8}
@@ -246,14 +261,54 @@ function ServiceContent({
                                         <Text style={styles.productMetadata}>{service.menuFoodGroupTitle}</Text>}
                                     {menuBuilderEnabled && service.description !== service.title && service.description &&
                                         <Text style={styles.productMetadata}>{service.description}</Text>}
+                                    {menuBuilderEnabled && !option && service.regularPrice && startingPrice && service.regularPrice > startingPrice
+                                        ? <Text style={styles.oldPrice}>{priceLabel(service.regularPrice)}</Text> : null}
                                     {menuBuilderEnabled && <Text style={styles.instructionText}>
-                                        {service.fixedPrice ? `${formatNumberWithSeparator(service.fixedPrice)} ${CURRENCY_LABEL}` : 'قیمت ثابت تنظیم نشده است'}
+                                        {startingPrice ? `${option ? 'از ' : ''}${priceLabel(startingPrice)}` : 'قیمت تنظیم نشده است'}
                                     </Text>}
                                 </View>
                                 <View style={[styles.checkCircle, isSelected && styles.checkCircleOn]}>
                                     {isSelected ? <Text style={styles.checkmarkText}>✓</Text> : null}
                                 </View>
                             </TouchableOpacity>
+                            {isSelected && menuBuilderEnabled && option && (
+                                <View style={styles.productOptions}>
+                                    <Text style={styles.instructionText}>{option.title}</Text>
+                                    {option.choices.map((choice, index) => {
+                                        const checked = selection.optionIndex === index;
+                                        return <TouchableOpacity key={choice.title} accessibilityRole="radio" accessibilityState={{ checked }}
+                                            style={[styles.productChoice, checked && styles.productChoiceSelected]}
+                                            onPress={() => saveMenuSelection(service, selected?.quantity, { ...selection, optionIndex: index })}>
+                                            <Text style={styles.productMetadata}>{checked ? '✓ ' : ''}{choice.title}</Text>
+                                            <View>
+                                                {choice.specialPrice != null && <Text style={styles.oldPrice}>{priceLabel(choice.price)}</Text>}
+                                                <Text style={styles.productMetadata}>{priceLabel(choice.specialPrice ?? choice.price)}</Text>
+                                            </View>
+                                        </TouchableOpacity>;
+                                    })}
+                                </View>
+                            )}
+                            {isSelected && menuBuilderEnabled && addons.length > 0 && (
+                                <View style={styles.productOptions}>
+                                    <Text style={styles.instructionText}>افزودنی‌ها</Text>
+                                    {addons.map((addon, index) => {
+                                        const checked = selectedAddons.includes(index);
+                                        return <TouchableOpacity key={addon.title} accessibilityRole="checkbox" accessibilityState={{ checked }}
+                                            style={[styles.productChoice, checked && styles.productChoiceSelected]}
+                                            onPress={() => saveMenuSelection(service, selected?.quantity, {
+                                                ...selection,
+                                                addonIndexes: checked ? selectedAddons.filter(value => value !== index)
+                                                    : [...selectedAddons, index].sort((a, b) => a - b),
+                                            })}>
+                                            <Text style={styles.productMetadata}>{checked ? '✓ ' : ''}{addon.title}</Text>
+                                            <View>
+                                                {addon.specialPrice != null && <Text style={styles.oldPrice}>{priceLabel(addon.price)}</Text>}
+                                                <Text style={styles.productMetadata}>+ {priceLabel(addon.specialPrice ?? addon.price)}</Text>
+                                            </View>
+                                        </TouchableOpacity>;
+                                    })}
+                                </View>
+                            )}
                             {isSelected && (
                                 <View style={styles.amountRow}>
                                     <View style={styles.currencyTag}>
@@ -262,7 +317,7 @@ function ServiceContent({
                                     <TextInput
                                         style={styles.amountInput}
                                         value={menuBuilderEnabled ? String(selected?.quantity ?? '') : selected?.amount || ''}
-                                        onChangeText={(text) => menuBuilderEnabled ? changeQuantity(service, text) : handleAmountChange(serviceId, text)}
+                                        onChangeText={(text) => menuBuilderEnabled ? changeQuantity(service, text, selection) : handleAmountChange(serviceId, text)}
                                         placeholder={menuBuilderEnabled ? "تعداد" : "مبلغ را وارد کنید"}
                                         maxLength={menuBuilderEnabled ? 10 : undefined}
                                         placeholderTextColor={colors.inkSoft}
@@ -298,7 +353,7 @@ function ServiceContent({
                             return;
                         }
                         if (!validateAllAmounts()) {
-                            showError(menuBuilderEnabled ? 'تعداد همه محصولات انتخاب‌شده را وارد کنید' : 'لطفاً مبلغ همه بخش‌های انتخاب‌شده را وارد کنید');
+                            showError(menuBuilderEnabled ? 'گزینه و تعداد محصولات انتخاب‌شده را بررسی کنید' : 'لطفاً مبلغ همه بخش‌های انتخاب‌شده را وارد کنید');
                             return;
                         }
                         navigation.navigate('Checkout');
@@ -316,6 +371,10 @@ function ServiceContent({
 }
 
 const styles = StyleSheet.create({
+    productOptions: { gap: 5, marginTop: 6 },
+    productChoice: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderWidth: 1, borderColor: colors.line, borderRadius: 8, backgroundColor: colors.surface },
+    productChoiceSelected: { borderColor: colors.orange },
+    oldPrice: { textDecorationLine: 'line-through', textAlign: 'right', color: colors.inkSoft, fontSize: 11, fontFamily: fonts.regular },
     productImage: { width: 48, height: 48, borderRadius: 8, marginLeft: 8 },
     productInfo: { flex: 1 },
     productMetadata: { fontSize: 11, textAlign: 'right', color: colors.inkSoft, fontFamily: fonts.regular },

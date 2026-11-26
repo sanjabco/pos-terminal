@@ -24,11 +24,13 @@ import { useCustomer, useCashbacks, useLinesDropdown, fetchShareDiscountPreview 
 import { useServiceContext } from '../providers/ServiceProvider';
 import { useSnackbarContext } from '../providers/SnackbarProvider';
 import { CURRENCY_LABEL, formatNumberWithSeparator } from '../utils/currency';
-import type { Customer, CustomerActiveDiscount, OccasionGift, ShareDiscountPreviewItem, LinesDropdownResponse, TransactionRequest } from '../services/api';
+import type { Customer, CustomerActiveDiscount, OccasionGift, ShareDiscountPreviewItem, LinesDropdownResponse, TransactionRequest, MenuSelection } from '../services/api';
 import { colors, fonts } from '../theme/colors';
 import moment from 'moment-jalaali';
+import { quoteMenuProduct } from '../utils/menuPricing';
 
 interface LinePreview {
+  menuSelection?: MenuSelection;
   quantity?: number;
   lineId: number;
   lineTitle: string;
@@ -430,6 +432,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         lineId,
         lineTitle: service.title,
         quantity: service.quantity,
+        menuSelection: service.menuSelection,
         price,
         discountAmount,
         adjustedPrice,
@@ -676,8 +679,10 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         return null;
       }
       if (linePreviews.some(item => {
-        const fixedPrice = menu.lines.find(line => line.id === item.lineId)?.fixedPrice;
-        return !fixedPrice || !item.quantity || fixedPrice * item.quantity !== item.price;
+        const line = menu.lines.find(entry => entry.id === item.lineId);
+        const quote = line ? quoteMenuProduct(line, item.menuSelection ?? {}) : null;
+        return !quote || !item.quantity || quote.unitPrice * item.quantity !== item.price ||
+          JSON.stringify(quote.choiceTitles) !== JSON.stringify(item.menuSelection?.choiceTitles ?? []);
       })) {
         showError('قیمت یا تعداد بخش‌ها را دوباره در صفحه انتخاب بخش بررسی کنید');
         return null;
@@ -696,7 +701,7 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
         ...(takeaway === false && tableId != null ? { tableId } : {}),
       } : {}),
       cashBackDto: linePreviews.map((preview) => ({
-        ...(menu.menuBuilderEnabled ? { quantity: preview.quantity } : {}),
+        ...(menu.menuBuilderEnabled ? { quantity: preview.quantity, addonIndexes: [], ...preview.menuSelection } : {}),
         lineId: preview.lineId,
         lineTitle: preview.lineTitle,
         price: Math.round(preview.price).toString(),
@@ -778,6 +783,11 @@ function Checkout({ navigation }: { navigation: any }): React.JSX.Element {
 
         {menuBuilderEnabled && (
           <View style={styles.orderFields}>
+            {linePreviews.filter(item => item.menuSelection?.choiceTitles?.length).map(item => (
+              <Text key={item.lineId} style={styles.orderOptionText}>
+                {item.lineTitle} · {item.menuSelection?.choiceTitles?.join('، ')}
+              </Text>
+            ))}
             <Text style={styles.sectionLabel}>نوع سفارش</Text>
             <View style={styles.orderOptions}>
               {[false, true].map(option => (

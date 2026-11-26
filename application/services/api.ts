@@ -250,7 +250,21 @@ export interface LinesDropdownResponse {
   };
 }
 
+export interface MenuPriceChoice {
+  title: string;
+  price: number;
+  specialPrice?: number | null;
+}
+
+export interface MenuSelection {
+  optionIndex?: number;
+  addonIndexes?: number[];
+  choiceTitles?: string[];
+}
+
 export interface LineDetail {
+  regularPrice?: number | null;
+  menuPricing?: { option?: { title: string; choices: MenuPriceChoice[] } | null; addons: MenuPriceChoice[] } | null;
   description?: string;
   menuImage?: string | null;
   menuFoodGroupTitle?: string;
@@ -380,7 +394,7 @@ export interface Customer {
   anniversaryGift?: OccasionGift | null;
 }
 
-export interface CashBackDto {
+export interface CashBackDto extends MenuSelection {
   quantity?: number;
   lineId: number;
   lineTitle: string;
